@@ -29,7 +29,8 @@ URL_ASCII = ('%', "#", ';', '"', '<', '>', '?', '[', '\\', "]", '^', '`', '{',
             'á', 'â', 'ã', 'ä', 'å', 'æ', 'ç', 'è', 'é', 'ê', 'ë', 'ì', 'í',
             'î', 'ï', 'ð', 'ñ', 'ò', 'ó', 'ô', 'õ', 'ö', '÷', 'ø', 'ù', 'ú',
             'û', 'ü', 'ý', 'þ', 'ÿ', '¦', ':', '*')
-musiclibrary = '/home/user/music/albums'
+
+musiclibrary = '/home/user/Music/albums'
 librarystyle = ['Artist', 'Album', 'Track']
 sourcefolder = os.path.dirname(os.getenv('HOME') + '/music/sync/')
 originalfolder = sourcefolder
@@ -49,20 +50,55 @@ class uSyncP3(object):
         self.builder.add_from_file("uSyncP3.ui")
         self.builder.connect_signals(self)
         sourcefolder = os.path.dirname(os.getenv('HOME'))
-        self.library = self.builder.get_object("librarychooser")
-        self.library.set_current_folder(sourcefolder)
+        self.foldertree = self.builder.get_object("folderview")
+        self.folderlist = self.builder.get_object('folderstore')
+        self.currentdirlabel = self.builder.get_object('currentdirlabel')
+        cell = Gtk.CellRendererText()
+        foldercolumn = Gtk.TreeViewColumn("Select Folder:", cell, text=0)
+        filecolumn = Gtk.TreeViewColumn("Select Files", cell, text=0)
+        self.foldertree.connect("row-activated", self.folderclick)
+        self.foldertree.append_column(foldercolumn)
+        self.foldertree.set_model(self.folderlist)
         self.fill_random()
         self.scan_for_media()
+        self.listfolder(musiclibrary)
 
 
     def run(self, *args):
-        self.Window = self.builder.get_object("window1")
-        self.Window.connect("destroy", self.quit)
-        self.Window.show()
+        self.window = self.builder.get_object("main_window")
+        self.window.connect("destroy", self.quit)
+        self.window.show()
         Gtk.main()
 
+    def folderclick(self, *args):
+        """ traverse folders on double click """
+        model, treeiter = self.foldertree.get_selection().get_selected()
+        if treeiter:
+            new_dir = self.current_dir + '/' + model[treeiter][0]
+        if os.path.isdir(new_dir):
+            self.listfolder(new_dir)
+        return
+
+    def gohome(self, *args):
+        """ go to the defined home folder """
+        #self.clearopenfiles()
+        self.listfolder(musiclibrary)
+
+    def goback(self, *args):
+        """ go back the the previous directory """
+        back_dir = os.path.dirname(self.current_dir)
+        self.clearopenfiles()
+        self.listfolder(back_dir)
+        return
+
+    def keypress(self, actor, event):
+        """ capture backspace key for folder navigation """
+        if event.get_keycode()[1] == 22:
+            self.goback()
 
     def quit(self, *args):
+        """ stop the process thread and close the program"""
+        self.window.destroy()
         Gtk.main_quit(*args)
         return False
 
@@ -75,6 +111,33 @@ class uSyncP3(object):
             string = string.replace(URL_ASCII[count], '_')
             count = count + 1
         return string
+
+    def listfolder(self, *args):
+        """ function to list the folder column """
+        self.current_dir = args[0]
+        self.currentdirlabel.set_text('Current Folder: ' + 
+                                      str(os.path.normpath(self.current_dir)))
+        if not type(args[0]) == type(''):
+            self.current_dir = args[0].get_current_folder()
+        try:
+            self.filelist = os.listdir(self.current_dir)
+            self.filelist.sort(key=lambda y: y.lower())
+        except OSError:
+            self.listfolder(os.getenv('HOME'))
+        # clear list if we have scanned before
+        for items in self.folderlist:
+            self.folderlist.remove(items.iter)
+        # clear combobox before adding entries
+        for items in self.foldertree:
+            self.foldertree.remove(items.iter)
+        # search the supplied directory for items
+        for items in self.filelist:
+            test_dir = os.path.isdir(self.current_dir + '/' + items)
+            if not items[0] == '.' and test_dir:
+                self.folderlist.append([items])
+        #self.clearopenfiles()
+        #self.listfiles()
+        return
 
     def sync_source(self, *args):
         global sourcefolder
@@ -168,7 +231,7 @@ class uSyncP3(object):
                 trackcount = trackcount + 1
                 try:
                     print 'Copying: ' + test
-                    shutil.copy(test, self.remove_utf8(destin)s)
+                    shutil.copy(test, self.remove_utf8(destin))
                 except:
                     print 'Creating ' + destin + ' failed.'
         self.statusbar.pop(40)
@@ -200,13 +263,18 @@ class uSyncP3(object):
     
     def scan_for_media(self, *args):
         self.medialist = self.builder.get_object('medialiststore')
+        media_dir = '/media/'
         # clear list if we have scanned before
         for items in self.medialist:
             self.medialist.remove(items.iter)
-        # search the media directory for items
+        # check ubuntu/mint media folders
         for items in os.listdir('/media'):
+            if items == os.getenv('USERNAME'):
+                media_dir = media_dir + os.getenv('USERNAME')
+        # search the media directory for items
+        for items in os.listdir(media_dir):
             if not items == 'cdrom':
-                self.medialist.append(['/media/' + items])
+                self.medialist.append([media_dir + '/' + items])
         self.mediacombo = self.builder.get_object('mediacombobox')
         # clear combobox before adding entries
         self.mediacombo.clear()
