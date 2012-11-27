@@ -58,9 +58,8 @@ class USYNCP3(object):
         self.builder = Gtk.Builder()
         self.builder.add_from_file("pysyncp3.ui")
         self.builder.connect_signals(self)
-        # load ui
+        # main window
         self.window = self.builder.get_object("main_window")
-        self.confwindow = self.builder.get_object("configwindow")
         self.foldertree = self.builder.get_object("folderview")
         self.folderlist = self.builder.get_object('folderstore')
         self.currentdirlabel = self.builder.get_object('currentdirlabel')
@@ -74,7 +73,14 @@ class USYNCP3(object):
         self.backbutton = self.builder.get_object("backbutton")
         self.homebutton = self.builder.get_object("homebutton")
         self.statusbar = self.builder.get_object('statusbar1')
+        # conf window
+        self.confwindow = self.builder.get_object("configwindow")
         self.suffixbox = self.builder.get_object('suffixentry')
+        self.libraryentry = self.builder.get_object('libraryentry')
+        self.styleentry = self.builder.get_object('styleentry')
+        self.homeentry = self.builder.get_object('homeentry')
+        self.applybutton = self.builder.get_object("applyconf")
+        self.closebutton = self.builder.get_object("closeconf")
         # load basic elements / connect actions
         self.prepwindow()
         # read conf file
@@ -104,6 +110,8 @@ class USYNCP3(object):
         self.settingsbutton.connect("clicked", self.showconfig)
         self.backbutton.connect("clicked", self.goback)
         self.homebutton.connect("clicked", self.gohome)
+        self.applybutton.connect("clicked", self.saveconf)
+        self.closebutton.connect("clicked", self.closeconf)
         # prepare folder list
         cell = Gtk.CellRendererText()
         foldercolumn = Gtk.TreeViewColumn("Select Folder:", cell, text=0)
@@ -115,7 +123,30 @@ class USYNCP3(object):
 
     def showconfig(self, *args):
         """ fill and show the config window """
+        self.homeentry.set_text(self.homefolder)
+        self.libraryentry.set_text(self.library)
+        self.styleentry.set_text(self.libraryformat)
         self.confwindow.show()
+        return
+
+    def saveconf(self, *args):
+        """ save any config changes and update live settings"""
+        self.conf.read(CONFIG)
+        self.conf.set('conf', 'home', self.homeentry.get_text())
+        self.conf.set('conf', 'defaultlibrary', self.libraryentry.get_text())
+        self.conf.set('conf', 'outputstyle', self.styleentry.get_text())
+        self.homefolder = self.homeentry.get_text()
+        self.library = self.libraryentry.get_text()
+        self.libraryformat = self.styleentry.get_text()
+        # write to conf file
+        conffile = open(CONFIG, "w")
+        self.conf.write(conffile)
+        conffile.close()
+        return
+
+    def closeconf(self, *args):
+        """ hide the config window """
+        self.confwindow.hide()
         return
 
     def folderclick(self, *args):
@@ -192,6 +223,11 @@ class USYNCP3(object):
             test_dir = os.path.isdir(self.current_dir + '/' + items)
             if not items[0] == '.' and test_dir:
                 self.folderlist.append([items])
+        # list files when no more folders found
+        if len(self.folderlist) == 0:
+           for items in self.filelist:
+                if not items[0] == '.':
+                    self.folderlist.append([items])
         return
 
     def sync_source(self, *args):
