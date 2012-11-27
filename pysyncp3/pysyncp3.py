@@ -72,10 +72,10 @@ class USYNCP3(object):
         self.settingsbutton = self.builder.get_object("settingsbutton")
         self.backbutton = self.builder.get_object("backbutton")
         self.homebutton = self.builder.get_object("homebutton")
+        self.suffixbox = self.builder.get_object('suffixentry')
         self.statusbar = self.builder.get_object('statusbar1')
         # conf window
         self.confwindow = self.builder.get_object("configwindow")
-        self.suffixbox = self.builder.get_object('suffixentry')
         self.libraryentry = self.builder.get_object('libraryentry')
         self.styleentry = self.builder.get_object('styleentry')
         self.homeentry = self.builder.get_object('homeentry')
@@ -115,7 +115,6 @@ class USYNCP3(object):
         # prepare folder list
         cell = Gtk.CellRendererText()
         foldercolumn = Gtk.TreeViewColumn("Select Folder:", cell, text=0)
-        filecolumn = Gtk.TreeViewColumn("Select Files", cell, text=0)
         self.foldertree.append_column(foldercolumn)
         self.foldertree.set_model(self.folderlist)
         # check for config file and info
