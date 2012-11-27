@@ -1,0 +1,4 @@
+#!/bin/sh
+
+# launch pysyncp3
+/usr/share/pysyncp3/pysyncp3.py

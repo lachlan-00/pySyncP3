@@ -1,0 +1,12 @@
+[Desktop Entry]
+Name=pysyncp3
+Comment=Sync MP3's to your USB media
+Exec=/usr/bin/pysyncp3
+Icon=/usr/share/pixmaps/pysyncp3.png
+Terminal=false
+MultipleArgs=false
+Type=Application
+Categories=AudioVideo;Applications;
+StartupNotify=true
+Name[en_AU]=pysyncp3
+Comment[en_AU.UTF-8]=Python music tag editor

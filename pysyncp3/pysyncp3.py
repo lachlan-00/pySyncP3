@@ -56,7 +56,7 @@ class USYNCP3(object):
     def __init__(self):
         """ ??? """
         self.builder = Gtk.Builder()
-        self.builder.add_from_file("pysyncp3.ui")
+        self.builder.add_from_file("/usr/share/pysyncp3/pysyncp3.ui")
         self.builder.connect_signals(self)
         # main window
         self.window = self.builder.get_object("main_window")
