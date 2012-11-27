@@ -45,7 +45,6 @@ URL_ASCII = ('%', "#", ';', '"', '<', '>', '?', '[', '\\', "]", '^', '`', '{',
 LIBRARYSTYLE = ['Artist', 'Album', 'Track']
 HOMEFOLDER = os.getenv('HOME')
 DISKFREE = True
-#count = 0
 TOTALCOUNT = 0
 CONFIG = xdg_config_dirs[0] + '/usyncp3.conf'
 ICON_DIR = '/usr/share/icons/gnome/'
@@ -71,6 +70,27 @@ class USYNCP3(object):
         self.randomartist = self.builder.get_object('artistbutton')
         self.statusbar = self.builder.get_object('statusbar1')
         self.suffixbox = self.builder.get_object('suffixentry')
+        # load basic elements / connect actions
+        self.prepwindow()
+        # read conf file
+        self.conf = ConfigParser.RawConfigParser()
+        self.conf.read(CONFIG)
+        self.homefolder = self.conf.get('conf', 'home')
+        self.library = self.conf.get('conf', 'defaultlibrary')
+        self.libraryformat = self.conf.get('conf', 'outputstyle')
+        # start
+        self.run()
+
+    def run(self, *args):
+        """ Fill and show the main window """
+        self.listfolder(self.homefolder)
+        self.fill_random()
+        self.scan_for_media()
+        self.window.show()
+        Gtk.main()
+
+    def prepwindow(self):
+        """ run prep outside init """
         # connect events
         self.window.connect("destroy", self.quit)
         self.foldertree.connect("key-press-event", self.keypress)
@@ -81,23 +101,8 @@ class USYNCP3(object):
         filecolumn = Gtk.TreeViewColumn("Select Files", cell, text=0)
         self.foldertree.append_column(foldercolumn)
         self.foldertree.set_model(self.folderlist)
-        # get config info
-        self.conf = ConfigParser.RawConfigParser()
-        self.conf.read(CONFIG)
+        # check for config file and info
         self.checkconfig()
-        self.homefolder = self.conf.get('conf', 'home')
-        self.library = self.conf.get('conf', 'defaultlibrary')
-        self.libraryformat = self.conf.get('conf', 'outputstyle')
-        # fill UI
-        self.listfolder(self.homefolder)
-        self.fill_random()
-        self.scan_for_media()
-        self.run()
-
-    def run(self, *args):
-        """ ??? """
-        self.window.show()
-        Gtk.main()
 
     def folderclick(self, *args):
         """ traverse folders on double click """
@@ -276,8 +281,6 @@ class USYNCP3(object):
 
     def random_sync(self, *args):
         """ Find and copy random files """
-        global DISKFREE
-        global count
         library = args[0]
         if type(args[0]) == Gtk.Button:
             library = self.homefolder
