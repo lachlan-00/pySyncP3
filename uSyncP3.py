@@ -1,22 +1,34 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-""" USyncP3
+""" USyncP3: Sync Music to your media devices
     ----------------Authors----------------
     Lachlan de Waard <lachlan.00@gmail.com>
     ----------------Licence----------------
-    GNU GPLv3
+    GNU General Public License version 3
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
 
-
 import shutil
 import os
-#import subprocess
 import random
 import mimetypes
 
 from gi.repository import Gtk
+from xdg.BaseDirectory import xdg_config_dirs
 
 URL_ASCII = ('%', "#", ';', '"', '<', '>', '?', '[', '\\', "]", '^', '`', '{',
             '|', '}', '€', '‚', 'ƒ', '„', '…', '†', '‡', 'ˆ', '‰', 'Š', '‹',
@@ -30,43 +42,60 @@ URL_ASCII = ('%', "#", ';', '"', '<', '>', '?', '[', '\\', "]", '^', '`', '{',
             'î', 'ï', 'ð', 'ñ', 'ò', 'ó', 'ô', 'õ', 'ö', '÷', 'ø', 'ù', 'ú',
             'û', 'ü', 'ý', 'þ', 'ÿ', '¦', ':', '*')
 
-musiclibrary = '/home/user/Music/albums'
-librarystyle = ['Artist', 'Album', 'Track']
-sourcefolder = os.path.dirname(os.getenv('HOME') + '/music/sync/')
-originalfolder = sourcefolder
-chooseDrive = ['zenity', '--list', '--text="Select a USB Drive"',
-                    '--separator=" "', '--radiolist', '--column=',
-                    '--column="USB Drives"']
-diskFree = True
-count = 0
+LIBRARYSTYLE = ['Artist', 'Album', 'Track']
+HOMEFOLDER = os.getenv('HOME')
+DISKFREE = True
+#count = 0
 TOTALCOUNT = 0
+CONFIG = xdg_config_dirs[0] + '/usyncp3.conf'
+ICON_DIR = '/usr/share/icons/gnome/'
 
 
-class uSyncP3(object):
-
-
+class USYNCP3(object):
+    """ ??? """
     def __init__(self):
+        """ ??? """
         self.builder = Gtk.Builder()
         self.builder.add_from_file("uSyncP3.ui")
         self.builder.connect_signals(self)
-        sourcefolder = os.path.dirname(os.getenv('HOME'))
+        # load ui
+        self.window = self.builder.get_object("main_window")
         self.foldertree = self.builder.get_object("folderview")
         self.folderlist = self.builder.get_object('folderstore')
         self.currentdirlabel = self.builder.get_object('currentdirlabel')
+        self.medialist = self.builder.get_object('medialiststore')
+        self.mediacombo = self.builder.get_object("mediacombobox")
+        self.randomgroup = self.builder.get_object('randomgroup')
+        self.randomtrack = self.builder.get_object('trackbutton')
+        self.randomalbum = self.builder.get_object('albumbutton')
+        self.randomartist = self.builder.get_object('artistbutton')
+        self.statusbar = self.builder.get_object('statusbar1')
+        self.suffixbox = self.builder.get_object('suffixentry')
+        # connect events
+        self.window.connect("destroy", self.quit)
+        self.foldertree.connect("key-press-event", self.keypress)
+        self.foldertree.connect("row-activated", self.folderclick)
+        # prepare folder list
         cell = Gtk.CellRendererText()
         foldercolumn = Gtk.TreeViewColumn("Select Folder:", cell, text=0)
         filecolumn = Gtk.TreeViewColumn("Select Files", cell, text=0)
-        self.foldertree.connect("row-activated", self.folderclick)
         self.foldertree.append_column(foldercolumn)
         self.foldertree.set_model(self.folderlist)
+        # get config info
+        self.conf = ConfigParser.RawConfigParser()
+        self.conf.read(CONFIG)
+        self.checkconfig()
+        self.homefolder = self.conf.get('conf', 'home')
+        self.library = self.conf.get('conf', 'defaultlibrary')
+        self.libraryformat = self.conf.get('conf', 'outputstyle')
+        # fill UI
+        self.listfolder(self.homefolder)
         self.fill_random()
         self.scan_for_media()
-        self.listfolder(musiclibrary)
-
+        self.run()
 
     def run(self, *args):
-        self.window = self.builder.get_object("main_window")
-        self.window.connect("destroy", self.quit)
+        """ ??? """
         self.window.show()
         Gtk.main()
 
@@ -81,8 +110,7 @@ class uSyncP3(object):
 
     def gohome(self, *args):
         """ go to the defined home folder """
-        #self.clearopenfiles()
-        self.listfolder(musiclibrary)
+        self.listfolder(self.homefolder)
 
     def goback(self, *args):
         """ go back the the previous directory """
@@ -102,11 +130,22 @@ class uSyncP3(object):
         Gtk.main_quit(*args)
         return False
 
-    # replace disallowed characters with '_'
+    def checkconfig(self):
+        """ create a default config if not available """
+        if not os.path.isfile(CONFIG):
+            conffile = open(CONFIG, "w")
+            conffile.write("[conf]\nhome = " + os.getenv('HOME') +
+                       "\ndefaultlibrary = " + os.getenv('HOME') +
+                       "\noutputstyle = %artist% - %album% " +
+                       " - %track% - %title%\n")
+            conffile.close()
+        return
+
     def remove_utf8(self, *args):
         """ Function to help with FAT32 devices """
         string = args[0]
         count = 0
+        # replace disallowed characters with '_'
         while count < len(URL_ASCII):
             string = string.replace(URL_ASCII[count], '_')
             count = count + 1
@@ -135,18 +174,13 @@ class uSyncP3(object):
             test_dir = os.path.isdir(self.current_dir + '/' + items)
             if not items[0] == '.' and test_dir:
                 self.folderlist.append([items])
-        #self.clearopenfiles()
-        #self.listfiles()
         return
 
     def sync_source(self, *args):
-        global sourcefolder
         """ copy files in source folder to media device """
         print type(args[0])
         if not args[0] == '' and not type(args[0]) == Gtk.Button:
             sourcefolder = args[0]
-        self.medialist = self.builder.get_object('medialiststore')
-        self.mediacombo = self.builder.get_object("mediacombobox")
         currentitem =  self.mediacombo.get_active_iter()
         destinfolder = self.medialist.get_value(currentitem, 0)
         currentfolder = os.listdir(sourcefolder)
@@ -178,6 +212,7 @@ class uSyncP3(object):
         return
 
     def get_random_type(self, *args):
+        """ ??? """
         if self.randomtrack.get_active():
             randomitem = 'Track'
         if self.randomalbum.get_active():
@@ -185,7 +220,7 @@ class uSyncP3(object):
         if self.randomartist.get_active():
             randomitem = 'Artist'
         self.randomcount = 0
-        for items in librarystyle:
+        for items in LIBRARYSTYLE:
             if items == randomitem:
                 print 'Random Sync By: ' + randomitem
                 return self.randomcount  + 1
@@ -194,6 +229,7 @@ class uSyncP3(object):
         return self.randomcount
     
     def random_folder(self, *args):
+        """ ??? """
         print 'random folder'
         library = args[0]
         depth = args[1]
@@ -203,6 +239,7 @@ class uSyncP3(object):
         self.statusbar.push(41, 'Random sync completed.')
 
     def random_track(self, *args):
+        """ ??? """
         print 'random track'
         library = args[0]
         destinbase = args[1] + '/RANDOM0'
@@ -237,32 +274,28 @@ class uSyncP3(object):
         self.statusbar.pop(40)
         self.statusbar.push(41, 'Random sync completed.')
 
-    # Find and copy random files
     def random_sync(self, *args):
-        global diskFree
+        """ Find and copy random files """
+        global DISKFREE
         global count
         library = args[0]
         if type(args[0]) == Gtk.Button:
-            library = musiclibrary
-        self.statusbar = self.builder.get_object('statusbar1')
+            library = self.homefolder
         self.statusbar.pop(41)
         self.statusbar.push(40, 'Random sync in progress...')
-        self.medialist = self.builder.get_object('medialiststore')
-        self.mediacombo = self.builder.get_object('mediacombobox')
-        self.suffixbox = self.builder.get_object('suffixentry')
         self.randomcount = 0
         self.randomcount = self.get_random_type()
         currentitem =  self.mediacombo.get_active_iter()
         randomdestin = self.medialist.get_value(currentitem, 0) + '/' + self.suffixbox.get_text()
-        #while diskFree and not os.statvfs(os.path.dirname(destinfolder)).f_bfree == 20000:
-        if len(librarystyle) == self.randomcount:
+        #while DISKFREE and not os.statvfs(os.path.dirname(destinfolder)).f_bfree == 20000:
+        if len(LIBRARYSTYLE) == self.randomcount:
             self.random_track(library, randomdestin)
         else:
             print 'Random Folder Sync'
             self.random_folder(library, self.randomcount, randomdestin)
     
     def scan_for_media(self, *args):
-        self.medialist = self.builder.get_object('medialiststore')
+        """ ??? """
         media_dir = '/media/'
         # clear list if we have scanned before
         for items in self.medialist:
@@ -275,7 +308,6 @@ class uSyncP3(object):
         for items in os.listdir(media_dir):
             if not items == 'cdrom':
                 self.medialist.append([media_dir + '/' + items])
-        self.mediacombo = self.builder.get_object('mediacombobox')
         # clear combobox before adding entries
         self.mediacombo.clear()
         self.mediacombo.set_model(self.medialist)
@@ -286,13 +318,10 @@ class uSyncP3(object):
         return
 
     def fill_random(self, *args):
-        self.randomgroup = self.builder.get_object('randomgroup')
-        self.randomtrack = self.builder.get_object('trackbutton')
-        self.randomalbum = self.builder.get_object('albumbutton')
-        self.randomartist = self.builder.get_object('artistbutton')
+        """ ??? """
         self.randomtrack.set_active(False)
         self.randomalbum.set_active(True)
         self.randomartist.set_active(False)
         
-
-uSyncP3().run()
+if __name__ == "__main__":
+    USYNCP3()
