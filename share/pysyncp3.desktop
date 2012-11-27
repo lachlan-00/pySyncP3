@@ -9,4 +9,4 @@ Type=Application
 Categories=AudioVideo;Applications;
 StartupNotify=true
 Name[en_AU]=pysyncp3
-Comment[en_AU.UTF-8]=Python music tag editor
+Comment[en_AU.UTF-8]=Sync MP3's to your USB media
