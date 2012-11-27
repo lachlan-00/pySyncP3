@@ -26,6 +26,7 @@ import shutil
 import os
 import random
 import mimetypes
+import ConfigParser
 
 from gi.repository import Gtk
 from xdg.BaseDirectory import xdg_config_dirs
@@ -59,6 +60,7 @@ class USYNCP3(object):
         self.builder.connect_signals(self)
         # load ui
         self.window = self.builder.get_object("main_window")
+        self.confwindow = self.builder.get_object("configwindow")
         self.foldertree = self.builder.get_object("folderview")
         self.folderlist = self.builder.get_object('folderstore')
         self.currentdirlabel = self.builder.get_object('currentdirlabel')
@@ -68,6 +70,9 @@ class USYNCP3(object):
         self.randomtrack = self.builder.get_object('trackbutton')
         self.randomalbum = self.builder.get_object('albumbutton')
         self.randomartist = self.builder.get_object('artistbutton')
+        self.settingsbutton = self.builder.get_object("settingsbutton")
+        self.backbutton = self.builder.get_object("backbutton")
+        self.homebutton = self.builder.get_object("homebutton")
         self.statusbar = self.builder.get_object('statusbar1')
         self.suffixbox = self.builder.get_object('suffixentry')
         # load basic elements / connect actions
@@ -93,8 +98,12 @@ class USYNCP3(object):
         """ run prep outside init """
         # connect events
         self.window.connect("destroy", self.quit)
+        self.settingsbutton.connect("clicked", self.showconfig)
         self.foldertree.connect("key-press-event", self.keypress)
         self.foldertree.connect("row-activated", self.folderclick)
+        self.settingsbutton.connect("clicked", self.showconfig)
+        self.backbutton.connect("clicked", self.goback)
+        self.homebutton.connect("clicked", self.gohome)
         # prepare folder list
         cell = Gtk.CellRendererText()
         foldercolumn = Gtk.TreeViewColumn("Select Folder:", cell, text=0)
@@ -103,6 +112,11 @@ class USYNCP3(object):
         self.foldertree.set_model(self.folderlist)
         # check for config file and info
         self.checkconfig()
+
+    def showconfig(self, *args):
+        """ fill and show the config window """
+        self.confwindow.show()
+        return
 
     def folderclick(self, *args):
         """ traverse folders on double click """
@@ -120,7 +134,6 @@ class USYNCP3(object):
     def goback(self, *args):
         """ go back the the previous directory """
         back_dir = os.path.dirname(self.current_dir)
-        self.clearopenfiles()
         self.listfolder(back_dir)
         return
 
