@@ -73,6 +73,7 @@ class USYNCP3(object):
         self.backbutton = self.builder.get_object("backbutton")
         self.homebutton = self.builder.get_object("homebutton")
         self.suffixbox = self.builder.get_object('suffixentry')
+        self.refreshmediabutton = self.builder.get_object("refreshmediabutton")
         self.statusbar = self.builder.get_object('statusbar1')
         # conf window
         self.confwindow = self.builder.get_object("configwindow")
@@ -108,6 +109,7 @@ class USYNCP3(object):
         self.foldertree.connect("key-press-event", self.keypress)
         self.foldertree.connect("row-activated", self.folderclick)
         self.settingsbutton.connect("clicked", self.showconfig)
+        self.refreshmediabutton.connect("clicked", self.scan_for_media)
         self.backbutton.connect("clicked", self.goback)
         self.homebutton.connect("clicked", self.gohome)
         self.applybutton.connect("clicked", self.saveconf)
@@ -347,17 +349,17 @@ class USYNCP3(object):
     
     def scan_for_media(self, *args):
         """ ??? """
-        media_dir = '/media/'
+        media_dir = '/media'
         # clear list if we have scanned before
         for items in self.medialist:
             self.medialist.remove(items.iter)
         # check ubuntu/mint media folders
-        for items in os.listdir('/media'):
+        for items in os.listdir(media_dir):
             if items == os.getenv('USERNAME'):
                 media_dir = media_dir + os.getenv('USERNAME')
         # search the media directory for items
         for items in os.listdir(media_dir):
-            if not items == 'cdrom':
+            if not items[:5] == 'cdrom':
                 self.medialist.append([media_dir + '/' + items])
         # clear combobox before adding entries
         self.mediacombo.clear()
