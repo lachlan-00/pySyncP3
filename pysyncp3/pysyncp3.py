@@ -356,7 +356,7 @@ class USYNCP3(object):
         # check ubuntu/mint media folders
         for items in os.listdir(media_dir):
             if items == os.getenv('USERNAME'):
-                media_dir = media_dir + os.getenv('USERNAME')
+                media_dir = media_dir + '/' + os.getenv('USERNAME')
         # search the media directory for items
         for items in os.listdir(media_dir):
             if not items[:5] == 'cdrom':
