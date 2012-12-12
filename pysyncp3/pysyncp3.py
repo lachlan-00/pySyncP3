@@ -74,6 +74,8 @@ class USYNCP3(object):
         self.homebutton = self.builder.get_object("homebutton")
         self.suffixbox = self.builder.get_object('suffixentry')
         self.refreshmediabutton = self.builder.get_object("refreshmediabutton")
+        self.syncfolderbutton = self.builder.get_object("syncfolderbutton")
+        self.syncrandombutton = self.builder.get_object("syncrandombutton")
         self.statusbar = self.builder.get_object('statusbar1')
         # conf window
         self.confwindow = self.builder.get_object("configwindow")
@@ -84,6 +86,7 @@ class USYNCP3(object):
         self.closebutton = self.builder.get_object("closeconf")
         # load basic elements / connect actions
         self.prepwindow()
+        self.originalfolder = None
         # read conf file
         self.conf = ConfigParser.RawConfigParser()
         self.conf.read(CONFIG)
@@ -110,6 +113,8 @@ class USYNCP3(object):
         self.foldertree.connect("row-activated", self.folderclick)
         self.settingsbutton.connect("clicked", self.showconfig)
         self.refreshmediabutton.connect("clicked", self.scan_for_media)
+        self.syncfolderbutton.connect("clicked", self.sync_folder)
+        self.syncrandombutton.connect("clicked", self.sync_random)
         self.backbutton.connect("clicked", self.goback)
         self.homebutton.connect("clicked", self.gohome)
         self.applybutton.connect("clicked", self.saveconf)
@@ -231,20 +236,24 @@ class USYNCP3(object):
                     self.folderlist.append([items])
         return
 
+    def sync_folder(self, *args):
+        self.originalfolder = self.current_dir
+        self.sync_source(self.current_dir)
+
     def sync_source(self, *args):
         """ copy files in source folder to media device """
-        print type(args[0])
         if not args[0] == '' and not type(args[0]) == Gtk.Button:
             sourcefolder = args[0]
         currentitem =  self.mediacombo.get_active_iter()
-        destinfolder = self.medialist.get_value(currentitem, 0)
+        destinfolder = (self.medialist.get_value(currentitem, 0) + '/' +
+                                    self.suffixbox.get_text())
+        print destinfolder
         currentfolder = os.listdir(sourcefolder)
         currentfolder.sort()
         for items in currentfolder:
             source = os.path.join(sourcefolder + '/' + items)
             destin = os.path.join(destinfolder + str.replace(sourcefolder,
-                                    originalfolder, '')
-                                     + '/' + items)
+                                    self.originalfolder, '') + '/' + items)
             if os.path.isdir(source):
                 self.sync_source(source)
             if os.path.isfile(source):
@@ -262,8 +271,9 @@ class USYNCP3(object):
                 except IOError:
                     """ FAT32 Compatability """
                     shutil.copy(source, self.remove_utf8(destin))
-                print 'Moved ' + items
-                print ' '
+                print 'Copied: ' + items
+                print 'To:     ' + destin
+                print ''
         return
 
     def get_random_type(self, *args):
@@ -282,7 +292,10 @@ class USYNCP3(object):
             else:
                 self.randomcount = self.randomcount + 1
         return self.randomcount
-    
+
+    def sync_random(self, *args):
+        print self.current_dir
+
     def random_folder(self, *args):
         """ ??? """
         print 'random folder'
