@@ -84,9 +84,15 @@ class USYNCP3(object):
         self.homeentry = self.builder.get_object('homeentry')
         self.applybutton = self.builder.get_object("applyconf")
         self.closebutton = self.builder.get_object("closeconf")
+        # dialog windows
+        self.enddialog = self.builder.get_object("end_dialog")
+        self.endclosebutton = self.builder.get_object("endclosebutton")
         # load basic elements / connect actions
         self.prepwindow()
         self.originalfolder = None
+        self.current_dir = None
+        self.randomcount = None
+        self.filelist = None
         # read conf file
         self.conf = ConfigParser.RawConfigParser()
         self.conf.read(CONFIG)
@@ -119,6 +125,7 @@ class USYNCP3(object):
         self.homebutton.connect("clicked", self.gohome)
         self.applybutton.connect("clicked", self.saveconf)
         self.closebutton.connect("clicked", self.closeconf)
+        self.endclosebutton.connect("clicked", self.closepop)
         # prepare folder list
         cell = Gtk.CellRendererText()
         foldercolumn = Gtk.TreeViewColumn("Select Folder:", cell, text=0)
@@ -153,6 +160,11 @@ class USYNCP3(object):
     def closeconf(self, *args):
         """ hide the config window """
         self.confwindow.hide()
+        return
+
+    def closepop(self, *args):
+        """ hide the config window """
+        self.enddialog.hide()
         return
 
     def folderclick(self, *args):
@@ -209,6 +221,7 @@ class USYNCP3(object):
     def listfolder(self, *args):
         """ function to list the folder column """
         self.current_dir = args[0]
+        self.current_dir = self.current_dir.replace('//', '/')
         self.currentdirlabel.set_text('Current Folder: ' + 
                                       str(os.path.normpath(self.current_dir)))
         if not type(args[0]) == type(''):
@@ -231,14 +244,17 @@ class USYNCP3(object):
                 self.folderlist.append([items])
         # list files when no more folders found
         if len(self.folderlist) == 0:
-           for items in self.filelist:
+            for items in self.filelist:
                 if not items[0] == '.':
                     self.folderlist.append([items])
         return
 
     def sync_folder(self, *args):
+        """ ??? """
         self.originalfolder = self.current_dir
         self.sync_source(self.current_dir)
+        self.enddialog.set_markup('Folder sync complete.')
+        self.enddialog.show()
 
     def sync_source(self, *args):
         """ copy files in source folder to media device """
@@ -261,15 +277,15 @@ class USYNCP3(object):
                     try:
                         os.makedirs(os.path.dirname(destin))
                     except OSError:
-                        """ FAT32 Compatability """
+                        # FAT32 Compatability
                         destin = self.remove_utf8(destin)
                         if not os.path.isdir(os.path.dirname(destin)):
                             os.makedirs(os.path.dirname(destin))
                 try:
-                    """ Try to copy as original filename """
+                    # Try to copy as original filename
                     shutil.copy(source, destin)
                 except IOError:
-                    """ FAT32 Compatability """
+                    # FAT32 Compatability
                     shutil.copy(source, self.remove_utf8(destin))
                 print 'Copied: ' + items
                 print 'To:     ' + destin
@@ -294,6 +310,7 @@ class USYNCP3(object):
         return self.randomcount
 
     def sync_random(self, *args):
+        """ ??? """
         print self.current_dir
 
     def random_folder(self, *args):
@@ -324,7 +341,8 @@ class USYNCP3(object):
             else:
                 filler = filler + 1
         trackcount = 0
-        while trackcount < 255 and not os.statvfs(os.path.dirname(destinbase)).f_bfree == 20000:
+        while trackcount < 255 and not os.statvfs(os.path.dirname(destinbase)
+                                                    ).f_bfree == 20000:
             test = library + '/' + random.choice(os.listdir(library))
             while os.path.isdir(test):
                 try:
@@ -337,7 +355,7 @@ class USYNCP3(object):
                 try:
                     print 'Copying: ' + test
                     shutil.copy(test, self.remove_utf8(destin))
-                except:
+                except OSError:
                     print 'Creating ' + destin + ' failed.'
         self.statusbar.pop(40)
         self.statusbar.push(41, 'Random sync completed.')
@@ -352,8 +370,10 @@ class USYNCP3(object):
         self.randomcount = 0
         self.randomcount = self.get_random_type()
         currentitem =  self.mediacombo.get_active_iter()
-        randomdestin = self.medialist.get_value(currentitem, 0) + '/' + self.suffixbox.get_text()
-        #while DISKFREE and not os.statvfs(os.path.dirname(destinfolder)).f_bfree == 20000:
+        randomdestin = (self.medialist.get_value(currentitem, 0) + '/' +
+                        self.suffixbox.get_text())
+        #while DISKFREE and not os.statvfs(
+        #os.path.dirname(destinfolder)).f_bfree == 20000:
         if len(LIBRARYSTYLE) == self.randomcount:
             self.random_track(library, randomdestin)
         else:
@@ -379,7 +399,7 @@ class USYNCP3(object):
         self.mediacombo.set_model(self.medialist)
         cell = Gtk.CellRendererText()
         self.mediacombo.pack_start(cell, False)
-        self.mediacombo.add_attribute(cell,'text',0)
+        self.mediacombo.add_attribute(cell, 'text', 0)
         self.mediacombo.set_active(0)
         return
 
