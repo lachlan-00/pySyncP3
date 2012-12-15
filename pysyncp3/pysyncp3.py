@@ -31,6 +31,13 @@ import ConfigParser
 from gi.repository import Gtk
 from xdg.BaseDirectory import xdg_config_dirs
 
+# python-eyeD3 required for parsing tags
+try:
+    import eyeD3
+    TAG_SUPPORT = True
+except ImportError:
+    TAG_SUPPORT = False
+
 URL_ASCII = ('%', "#", ';', '"', '<', '>', '?', '[', '\\', "]", '^', '`', '{',
             '|', '}', '€', '‚', 'ƒ', '„', '…', '†', '‡', 'ˆ', '‰', 'Š', '‹',
             'Œ', 'Ž', '‘', '’', '“', '”', '•', '–', '—', '˜', '™', 'š', '›',
@@ -58,49 +65,60 @@ class USYNCP3(object):
         self.builder = Gtk.Builder()
         self.builder.add_from_file("/usr/share/pysyncp3/pysyncp3.ui")
         self.builder.connect_signals(self)
-        # main window
-        self.window = self.builder.get_object("main_window")
-        self.foldertree = self.builder.get_object("folderview")
-        self.folderlist = self.builder.get_object('folderstore')
-        self.currentdirlabel = self.builder.get_object('currentdirlabel')
-        self.medialist = self.builder.get_object('medialiststore')
-        self.mediacombo = self.builder.get_object("mediacombobox")
-        self.randomgroup = self.builder.get_object('randomgroup')
-        self.randomtrack = self.builder.get_object('trackbutton')
-        self.randomalbum = self.builder.get_object('albumbutton')
-        self.randomartist = self.builder.get_object('artistbutton')
-        self.settingsbutton = self.builder.get_object("settingsbutton")
-        self.backbutton = self.builder.get_object("backbutton")
-        self.homebutton = self.builder.get_object("homebutton")
-        self.suffixbox = self.builder.get_object('suffixentry')
-        self.refreshmediabutton = self.builder.get_object("refreshmediabutton")
-        self.syncfolderbutton = self.builder.get_object("syncfolderbutton")
-        self.syncrandombutton = self.builder.get_object("syncrandombutton")
-        self.statusbar = self.builder.get_object('statusbar1')
-        # conf window
-        self.confwindow = self.builder.get_object("configwindow")
-        self.libraryentry = self.builder.get_object('libraryentry')
-        self.styleentry = self.builder.get_object('styleentry')
-        self.homeentry = self.builder.get_object('homeentry')
-        self.applybutton = self.builder.get_object("applyconf")
-        self.closebutton = self.builder.get_object("closeconf")
-        # dialog windows
-        self.enddialog = self.builder.get_object("end_dialog")
-        self.endclosebutton = self.builder.get_object("endclosebutton")
-        # load basic elements / connect actions
-        self.prepwindow()
-        self.originalfolder = None
-        self.current_dir = None
-        self.randomcount = None
-        self.filelist = None
-        # read conf file
-        self.conf = ConfigParser.RawConfigParser()
-        self.conf.read(CONFIG)
-        self.homefolder = self.conf.get('conf', 'home')
-        self.library = self.conf.get('conf', 'defaultlibrary')
-        self.libraryformat = self.conf.get('conf', 'outputstyle')
-        # start
-        self.run()
+        if not TAG_SUPPORT:
+            self.popwindow = self.builder.get_object("popup_window")
+            closeerror = self.builder.get_object("closepop")
+            closeerror.connect("clicked", self.closeerror)
+            self.popwindow.set_markup('PYSYNCP3 ERROR: Please install python-eyed3')
+            self.popwindow.show()
+            Gtk.main()
+        else:
+            # main window
+            self.window = self.builder.get_object("main_window")
+            self.foldertree = self.builder.get_object("folderview")
+            self.folderlist = self.builder.get_object('folderstore')
+            self.currentdirlabel = self.builder.get_object('currentdirlabel')
+            self.medialist = self.builder.get_object('medialiststore')
+            self.mediacombo = self.builder.get_object("mediacombobox")
+            self.randomgroup = self.builder.get_object('randomgroup')
+            self.randomtrack = self.builder.get_object('trackbutton')
+            self.randomalbum = self.builder.get_object('albumbutton')
+            self.randomartist = self.builder.get_object('artistbutton')
+            self.settingsbutton = self.builder.get_object("settingsbutton")
+            self.backbutton = self.builder.get_object("backbutton")
+            self.homebutton = self.builder.get_object("homebutton")
+            self.suffixbox = self.builder.get_object('suffixentry')
+            self.refreshmediabutton = self.builder.get_object("refreshmediabutton")
+            self.syncfolderbutton = self.builder.get_object("syncfolderbutton")
+            self.syncrandombutton = self.builder.get_object("syncrandombutton")
+            self.statusbar = self.builder.get_object('statuslabel')
+            # conf window
+            self.confwindow = self.builder.get_object("configwindow")
+            self.libraryentry = self.builder.get_object('libraryentry')
+            self.styleentry = self.builder.get_object('styleentry')
+            self.homeentry = self.builder.get_object('homeentry')
+            self.applybutton = self.builder.get_object("applyconf")
+            self.closebutton = self.builder.get_object("closeconf")
+            # dialog windows
+            self.popwindow = self.builder.get_object("popup_window")
+            self.popbutton = self.builder.get_object("closepop")
+            self.enddialog = self.builder.get_object("end_dialog")
+            self.endclosebutton = self.builder.get_object("endclosebutton")
+            # load basic elements / connect actions
+            self.prepwindow()
+            self.originalfolder = None
+            self.current_dir = None
+            self.randomcount = None
+            self.filelist = None
+            self.synclist = None
+            # read conf file
+            self.conf = ConfigParser.RawConfigParser()
+            self.conf.read(CONFIG)
+            self.homefolder = self.conf.get('conf', 'home')
+            self.library = self.conf.get('conf', 'defaultlibrary')
+            self.libraryformat = self.conf.get('conf', 'outputstyle')
+            # start
+            self.run()
 
     def run(self, *args):
         """ Fill and show the main window """
@@ -125,7 +143,8 @@ class USYNCP3(object):
         self.homebutton.connect("clicked", self.gohome)
         self.applybutton.connect("clicked", self.saveconf)
         self.closebutton.connect("clicked", self.closeconf)
-        self.endclosebutton.connect("clicked", self.closepop)
+        self.popbutton.connect("clicked", self.closepop)
+        self.endclosebutton.connect("clicked", self.closeendpop)
         # prepare folder list
         cell = Gtk.CellRendererText()
         foldercolumn = Gtk.TreeViewColumn("Select Folder:", cell, text=0)
@@ -164,6 +183,12 @@ class USYNCP3(object):
 
     def closepop(self, *args):
         """ hide the config window """
+        self.popwindow.hide()
+        return
+
+    def closeendpop(self, *args):
+        """ hide the config window """
+        self.statusbar.set_text('')
         self.enddialog.hide()
         return
 
@@ -191,6 +216,12 @@ class USYNCP3(object):
         if event.get_keycode()[1] == 22:
             self.goback()
 
+    def closeerror(self, *args):
+        """ hide the config window """
+        self.popwindow.destroy()
+        Gtk.main_quit(*args)
+        return False
+
     def quit(self, *args):
         """ stop the process thread and close the program"""
         self.window.destroy()
@@ -214,9 +245,117 @@ class USYNCP3(object):
         count = 0
         # replace disallowed characters with '_'
         while count < len(URL_ASCII):
-            string = string.replace(URL_ASCII[count], '_')
+            try:
+                string = string.replace(URL_ASCII[count], '_')
+            except UnicodeDecodeError:
+                pass
             count = count + 1
         return string
+
+    def fill_string(self, files, destin):
+        """ function to replace the variables with the tags for each file """
+        tmp_title = None
+        tmp_artist = None
+        tmp_album = None
+        tmp_albumartist = None
+        tmp_genre = None
+        tmp_track = None
+        tmp_disc = None
+        tmp_year = None
+        tmp_comment = None
+        try:
+            item = eyeD3.Tag()
+            item.link(files)
+            item.setVersion(eyeD3.ID3_V2_4)
+            item.setTextEncoding(eyeD3.UTF_8_ENCODING)
+        except Exception, err:
+            print 'line 244'
+            print type(err)
+            print err
+            # Tag error
+            item = None
+        # pull tag info for the current item
+        if item:
+            tmp_title = item.getTitle()
+            if tmp_title == 'None':
+                tmp_title = None
+            if tmp_title:
+                tmp_title = tmp_title.replace('/', '_')
+            tmp_artist = item.getArtist('TPE1')
+            if tmp_artist == 'None':
+                tmp_artist = None
+            if tmp_artist:
+                tmp_artist = tmp_artist.replace('/', '_')
+            tmp_album = item.getAlbum()
+            if tmp_album == 'None':
+                tmp_album = None
+            if tmp_album:
+                tmp_album = tmp_album.replace('/', '_')
+            tmp_albumartist = item.getArtist('TPE2')
+            if tmp_albumartist == 'None':
+                tmp_albumartist = None
+            if tmp_albumartist:
+                tmp_albumartist = tmp_albumartist.replace('/', '_')
+            try:
+                tmp_genre = str(item.getGenre())
+            except eyeD3.tag.GenreException:
+                tmp_genre = None
+            if tmp_genre == 'None':
+                tmp_genre = None
+            if tmp_genre:
+                tmp_genre = tmp_genre.replace('/', '_')
+                if ')' in tmp_genre:
+                    tmp_genre = tmp_genre.split(')')[1]
+            tmp_track = str(item.getTrackNum()[0])
+            if tmp_track == 'None':
+                tmp_track = None
+            if tmp_track:
+                if '/' in tmp_track:
+                    tmp_track = tmp_track.split('/')[0]
+                if len(tmp_track) == 1:
+                    tmp_track = '0' + str(tmp_track)
+                if len(tmp_track) > 2:
+                    tmp_track = tmp_track[:2]
+            tmp_disc = str(item.getDiscNum()[0])
+            if tmp_disc == 'None':
+                tmp_disc = None
+            if tmp_disc:
+                if '/' in tmp_disc:
+                    tmp_disc = tmp_disc.split('/')[0]
+                if len(tmp_disc) == 2:
+                    tmp_disc = tmp_disc[-1]
+            tmp_year = item.getYear()
+            if tmp_year == 'None':
+                tmp_year = None
+            tmp_comment = item.getComment()
+            if tmp_comment == 'None':
+                tmp_comment = None
+            if tmp_comment:
+                tmp_comment = tmp_comment.replace('/', '_')
+            # replace temp strings with actual tags
+            if tmp_title:
+                destin = destin.replace('%title%', tmp_title)
+            if tmp_albumartist:
+                destin = destin.replace('%albumartist%', tmp_albumartist)
+            else:
+                destin = destin.replace('%albumartist%', '%artist%')
+            if tmp_artist:
+                destin = destin.replace('%artist%', tmp_artist)
+            if tmp_album:
+                destin = destin.replace('%album%', tmp_album)
+            if tmp_genre:
+                destin = destin.replace('%genre%', tmp_genre)
+            if tmp_track:
+                destin = destin.replace('%track%', tmp_track)
+            if tmp_disc:
+                destin = destin.replace('%disc%', tmp_disc)
+            if tmp_year:
+                destin = destin.replace('%year%', tmp_year)
+            if tmp_comment:
+                destin = destin.replace('%comment%', tmp_comment)
+            destin = destin + files[(files.rfind('.')):]
+            return destin
+        return
 
     def listfolder(self, *args):
         """ function to list the folder column """
@@ -250,68 +389,120 @@ class USYNCP3(object):
         return
 
     def sync_folder(self, *args):
-        """ ??? """
+        """ sync files to media device """
+        self.synclist = []
         self.originalfolder = self.current_dir
+        currentitem =  self.mediacombo.get_active_iter()
+        try:
+            destinfolder = (self.medialist.get_value(currentitem, 0) + '/' +
+                                self.suffixbox.get_text())
+        except TypeError:
+            self.popwindow.set_markup('ERROR: Please insert a USB device and' +
+                                       ' refresh device list.')
+            self.popwindow.show()
+            return False
+        if os.statvfs(os.path.dirname(destinfolder)).f_bfree <= 10000:
+            self.popwindow.set_markup('ERROR: Low space on USB drive.')
+            self.popwindow.show()
+            return False
         self.sync_source(self.current_dir)
-        self.enddialog.set_markup('Folder sync complete.')
-        self.enddialog.show()
+        if not len(self.synclist) == 0:
+            for items in self.synclist:
+                if os.statvfs(os.path.dirname(destinfolder)).f_bfree <= 10000:
+                    self.popwindow.set_markup('ERROR: Low space on USB drive.')
+                    self.popwindow.show()
+                    return False
+                self.statusbar.set_text('Copied ' + os.path.basename(items))
+                destin = os.path.join(destinfolder + '/' +
+                                       self.libraryformat)
+                destin = self.fill_string(items, destin)
+                self.statusbar.set_text('Copying... ' + os.path.basename(items))
+                if not os.path.isdir(os.path.dirname(destin)):
+                    os.makedirs(os.path.dirname(destin))
+                try:
+                    # Try to copy as original filename
+                    shutil.copy(items, destin)
+                except IOError:
+                    # FAT32 Compatability
+                    shutil.copy(items, self.remove_utf8(destin))
+            self.enddialog.set_markup('Folder sync complete.')
+            self.enddialog.show()
 
     def sync_source(self, *args):
-        """ copy files in source folder to media device """
+        """ Get file list for syncing """
         if not args[0] == '' and not type(args[0]) == Gtk.Button:
             sourcefolder = args[0]
-        currentitem =  self.mediacombo.get_active_iter()
-        destinfolder = (self.medialist.get_value(currentitem, 0) + '/' +
-                                    self.suffixbox.get_text())
-        print destinfolder
         currentfolder = os.listdir(sourcefolder)
         currentfolder.sort()
         for items in currentfolder:
             source = os.path.join(sourcefolder + '/' + items)
-            destin = os.path.join(destinfolder + str.replace(sourcefolder,
-                                    self.originalfolder, '') + '/' + items)
+            #destin = os.path.join(destinfolder + str.replace(sourcefolder,
+            #                        self.originalfolder, '') + '/' + items)
             if os.path.isdir(source):
                 self.sync_source(source)
-            if os.path.isfile(source):
-                if not os.path.isdir(os.path.dirname(destin)):
-                    try:
-                        os.makedirs(os.path.dirname(destin))
-                    except OSError:
-                        # FAT32 Compatability
-                        destin = self.remove_utf8(destin)
-                        if not os.path.isdir(os.path.dirname(destin)):
-                            os.makedirs(os.path.dirname(destin))
-                try:
-                    # Try to copy as original filename
-                    shutil.copy(source, destin)
-                except IOError:
-                    # FAT32 Compatability
-                    shutil.copy(source, self.remove_utf8(destin))
-                print 'Copied: ' + items
-                print 'To:     ' + destin
-                print ''
+            if source[(source.rfind('.')):] == '.mp3':
+                self.synclist.append(source)
         return
 
     def get_random_type(self, *args):
         """ ??? """
+        randomitem = None
         if self.randomtrack.get_active():
-            randomitem = 'Track'
-        if self.randomalbum.get_active():
-            randomitem = 'Album'
-        if self.randomartist.get_active():
-            randomitem = 'Artist'
-        self.randomcount = 0
-        for items in LIBRARYSTYLE:
-            if items == randomitem:
-                print 'Random Sync By: ' + randomitem
-                return self.randomcount  + 1
-            else:
-                self.randomcount = self.randomcount + 1
-        return self.randomcount
+            randomitem = 'track'
+        elif self.randomalbum.get_active():
+            randomitem = 'album'
+        elif self.randomartist.get_active():
+            randomitem = 'artist'
+        else:
+            randomitem = None
+        return randomitem
 
     def sync_random(self, *args):
         """ ??? """
-        print self.current_dir
+        tmp = self.get_random_type()
+        #if tmp == 1:
+        #    print 'artist XXXX'
+        #if tmp == 2:
+        #    print 'ALBUMSSSSSSS'
+        #if tmp == 3:
+        #    print 'tracksssssssss'
+        self.synclist = []
+        self.originalfolder = self.current_dir
+        currentitem =  self.mediacombo.get_active_iter()
+        try:
+            destinfolder = (self.medialist.get_value(currentitem, 0) + '/' +
+                                self.suffixbox.get_text())
+        except TypeError:
+            self.popwindow.set_markup('ERROR: Please insert a USB device and' +
+                                       ' refresh device list.')
+            self.popwindow.show()
+            return False
+        if os.statvfs(os.path.dirname(destinfolder)).f_bfree <= 10000:
+            self.popwindow.set_markup('ERROR: Low space on USB drive.')
+            self.popwindow.show()
+            return False
+        self.sync_source(self.current_dir)
+        if not len(self.synclist) == 0:
+            for items in self.synclist:
+                if os.statvfs(os.path.dirname(destinfolder)).f_bfree <= 10000:
+                    self.popwindow.set_markup('ERROR: Low space on USB drive.')
+                    self.popwindow.show()
+                    return False
+                self.statusbar.set_text('Copied ' + os.path.basename(items))
+                destin = os.path.join(destinfolder + '/' +
+                                       self.libraryformat)
+                destin = self.fill_string(items, destin)
+                self.statusbar.set_text('Copying... ' + os.path.basename(items))
+                if not os.path.isdir(os.path.dirname(destin)):
+                    os.makedirs(os.path.dirname(destin))
+                try:
+                    # Try to copy as original filename
+                    shutil.copy(items, destin)
+                except IOError:
+                    # FAT32 Compatability
+                    shutil.copy(items, self.remove_utf8(destin))
+            self.enddialog.set_markup('Folder sync complete.')
+            self.enddialog.show()
 
     def random_folder(self, *args):
         """ ??? """
@@ -320,8 +511,7 @@ class USYNCP3(object):
         depth = args[1]
         destinbase = args[2]
         test = library + '/' + random.choice(os.listdir(library))
-        self.statusbar.pop(40)
-        self.statusbar.push(41, 'Random sync completed.')
+        self.statusbar.set_text('Random sync completed.')
 
     def random_track(self, *args):
         """ ??? """
@@ -357,16 +547,14 @@ class USYNCP3(object):
                     shutil.copy(test, self.remove_utf8(destin))
                 except OSError:
                     print 'Creating ' + destin + ' failed.'
-        self.statusbar.pop(40)
-        self.statusbar.push(41, 'Random sync completed.')
+        self.statusbar.set_text('Random sync completed.')
 
     def random_sync(self, *args):
         """ Find and copy random files """
         library = args[0]
         if type(args[0]) == Gtk.Button:
             library = self.homefolder
-        self.statusbar.pop(41)
-        self.statusbar.push(40, 'Random sync in progress...')
+        self.statusbar.set_text('Random sync in progress...')
         self.randomcount = 0
         self.randomcount = self.get_random_type()
         currentitem =  self.mediacombo.get_active_iter()
