@@ -475,32 +475,46 @@ class USYNCP3(object):
             return False
         self.sync_source(self.current_dir)
         if not len(self.synclist) == 0:
-            for items in self.synclist:
-                print 'GGG'
-                print items
-                try:
-                    item = eyeD3.Tag()
-                    item.link(items)
-                    item.setVersion(eyeD3.ID3_V2_4)
-                    item.setTextEncoding(eyeD3.UTF_8_ENCODING)
-                except Exception, err:
-                    print 'line 244'
-                    print type(err)
-                    print err
-                    # Tag error
-                    item = None
-                if tmp == 'artist':
-                    print 'artist XXXX'
-                elif tmp == 'album':
-                    print 'ALBUMSSSSSSS'
-                elif tmp == 'track':
-                   print 'tracksssssssss'
-                else:
-                   print tmp
-                #if os.statvfs(os.path.dirname(destinfolder)).f_bfree <= 10000:
-                #    self.popwindow.set_markup('ERROR: Low space on USB drive.')
-                #    self.popwindow.show()
-                #    return False
+            if tmp == 'track':
+                   #print 'tracksssssssss'
+                   self.randomlist = None
+            if not self.randomlist == None:
+                for items in self.synclist:
+                    print 'GGG'
+                    print items
+                    try:
+                        item = eyeD3.Tag()
+                        item.link(items)
+                        item.setVersion(eyeD3.ID3_V2_4)
+                        item.setTextEncoding(eyeD3.UTF_8_ENCODING)
+                    except Exception, err:
+                        print 'line 244'
+                        print type(err)
+                        print err
+                        # Tag error
+                        item = None
+                    if tmp == 'artist':
+                        #print 'artist XXXX'
+                        tmp_artist = item.getArtist('TPE1')
+                        if tmp_artist == 'None':
+                            tmp_artist = None
+                        if tmp_artist:
+                            tmp_artist = tmp_artist.replace('/', '_')
+                            self.randomlist.append(tmp_artist)
+                    elif tmp == 'album':
+                        #print 'ALBUMSSSSSSS'
+                        tmp_album = item.getAlbum()
+                        if tmp_album == 'None':
+                            tmp_album = None
+                        if tmp_album:
+                            tmp_album = tmp_album.replace('/', '_')
+                            self.randomlist.append(tmp_album)
+            if os.statvfs(os.path.dirname(destinfolder)).f_bfree <= 10000:
+                self.popwindow.set_markup('ERROR: Low space on USB drive.')
+                self.popwindow.show()
+                return False
+            if not self.randomlist:
+                self.random_track(self.originalfolder, destinfolder)
                 #self.statusbar.set_text('Copied ' + os.path.basename(items))
                 #destin = os.path.join(destinfolder + '/' +
                 #                       self.libraryformat)
@@ -544,8 +558,11 @@ class USYNCP3(object):
             else:
                 filler = filler + 1
         trackcount = 0
-        while trackcount < 255 and not os.statvfs(os.path.dirname(destinbase)
-                                                    ).f_bfree == 20000:
+        tmp_count = 255
+        if len(self.synclist) < tmp_count:
+            tmp_count = len(self.synclist)
+        while trackcount < tmp_count and not os.statvfs(os.path.dirname(destinbase)
+                                                    ).f_bfree == 10000:
             test = library + '/' + random.choice(os.listdir(library))
             while os.path.isdir(test):
                 try:
@@ -606,8 +623,8 @@ class USYNCP3(object):
 
     def fill_random(self, *args):
         """ ??? """
-        self.randomtrack.set_active(False)
-        self.randomalbum.set_active(True)
+        self.randomtrack.set_active(True)
+        self.randomalbum.set_active(False)
         self.randomartist.set_active(False)
         
 if __name__ == "__main__":
