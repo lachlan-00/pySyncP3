@@ -252,7 +252,7 @@ class USYNCP3(object):
             count = count + 1
         return string
 
-    def fill_string(self, files, destin):
+    def fill_string(self, items, destin):
         """ function to replace the variables with the tags for each file """
         tmp_title = None
         tmp_artist = None
@@ -268,10 +268,7 @@ class USYNCP3(object):
             item.link(files)
             item.setVersion(eyeD3.ID3_V2_4)
             item.setTextEncoding(eyeD3.UTF_8_ENCODING)
-        except Exception, err:
-            print 'line 244'
-            print type(err)
-            print err
+        except exceptions.NameError:
             # Tag error
             item = None
         # pull tag info for the current item
@@ -460,13 +457,8 @@ class USYNCP3(object):
     def sync_random(self, *args):
         """ ??? """
         tmp = self.get_random_type()
-        #if tmp == 1:
-        #    print 'artist XXXX'
-        #if tmp == 2:
-        #    print 'ALBUMSSSSSSS'
-        #if tmp == 3:
-        #    print 'tracksssssssss'
         self.synclist = []
+        self.randomlist = []
         self.originalfolder = self.current_dir
         currentitem =  self.mediacombo.get_active_iter()
         try:
@@ -484,23 +476,44 @@ class USYNCP3(object):
         self.sync_source(self.current_dir)
         if not len(self.synclist) == 0:
             for items in self.synclist:
-                if os.statvfs(os.path.dirname(destinfolder)).f_bfree <= 10000:
-                    self.popwindow.set_markup('ERROR: Low space on USB drive.')
-                    self.popwindow.show()
-                    return False
-                self.statusbar.set_text('Copied ' + os.path.basename(items))
-                destin = os.path.join(destinfolder + '/' +
-                                       self.libraryformat)
-                destin = self.fill_string(items, destin)
-                self.statusbar.set_text('Copying... ' + os.path.basename(items))
-                if not os.path.isdir(os.path.dirname(destin)):
-                    os.makedirs(os.path.dirname(destin))
+                print 'GGG'
+                print items
                 try:
-                    # Try to copy as original filename
-                    shutil.copy(items, destin)
-                except IOError:
-                    # FAT32 Compatability
-                    shutil.copy(items, self.remove_utf8(destin))
+                    item = eyeD3.Tag()
+                    item.link(items)
+                    item.setVersion(eyeD3.ID3_V2_4)
+                    item.setTextEncoding(eyeD3.UTF_8_ENCODING)
+                except Exception, err:
+                    print 'line 244'
+                    print type(err)
+                    print err
+                    # Tag error
+                    item = None
+                if tmp == 'artist':
+                    print 'artist XXXX'
+                elif tmp == 'album':
+                    print 'ALBUMSSSSSSS'
+                elif tmp == 'track':
+                   print 'tracksssssssss'
+                else:
+                   print tmp
+                #if os.statvfs(os.path.dirname(destinfolder)).f_bfree <= 10000:
+                #    self.popwindow.set_markup('ERROR: Low space on USB drive.')
+                #    self.popwindow.show()
+                #    return False
+                #self.statusbar.set_text('Copied ' + os.path.basename(items))
+                #destin = os.path.join(destinfolder + '/' +
+                #                       self.libraryformat)
+                #destin = self.fill_string(items, destin)
+                #self.statusbar.set_text('Copying... ' + os.path.basename(items))
+                #if not os.path.isdir(os.path.dirname(destin)):
+                #    os.makedirs(os.path.dirname(destin))
+                #try:
+                #    # Try to copy as original filename
+                #    shutil.copy(items, destin)
+                #except IOError:
+                #    # FAT32 Compatability
+                #    shutil.copy(items, self.remove_utf8(destin))
             self.enddialog.set_markup('Folder sync complete.')
             self.enddialog.show()
 
