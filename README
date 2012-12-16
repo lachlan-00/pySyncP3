@@ -1,3 +1,31 @@
-Curently incomplete, using git for mobile development.
+-----------------------------------
+pySyncP3: Sync music to USB devices
+-----------------------------------
+v0.0 - Development
 
-random tracks work, but conf file isn't created yet
+
+Current Status
+--------------
+Mostly complete now. Random album and artist to be added
+
+
+Why do this?
+------------
+Make it easier to copy music files to USB devices for things like car stereos
+
+
+About
+-----
+Insert your usb media.
+browse to your music folder and sync the files to USB or a random selection (up to 255 per folder)
+
+Requires
+--------
+* python 2.7
+* python-eyed3
+* gnome-icon-theme
+
+
+Links
+-----
+* https://github.com/lachlan-00/pySyncP3
