@@ -88,6 +88,7 @@ class PYSYNCP3(object):
             self.backbutton = self.builder.get_object("backbutton")
             self.homebutton = self.builder.get_object("homebutton")
             self.suffixbox = self.builder.get_object('suffixentry')
+            self.limitbox = self.builder.get_object('limitentry')
             self.refreshmediabutton = self.builder.get_object("refreshmediabutton")
             self.syncfolderbutton = self.builder.get_object("syncfolderbutton")
             self.syncrandombutton = self.builder.get_object("syncrandombutton")
@@ -526,8 +527,15 @@ class PYSYNCP3(object):
             else:
                 STOP = False
                 count = 0
+                length = len(self.randomlist)
+                try:
+                    limit = int(self.limitbox.get_text())
+                except ValueError:
+                    limit = length
+                if length < limit:
+                    limit = length
                 # sync random files until out of items or full
-                while not os.statvfs(os.path.dirname(destinfolder)).f_bfree <= 10000 and not STOP and not count == 10:
+                while not os.statvfs(os.path.dirname(destinfolder)).f_bfree <= 10000 and not STOP and not count == limit:
                     tmp = random.choice(self.randomlist)
                     for items in self.synclist:
                         if tmp in items:
@@ -544,9 +552,13 @@ class PYSYNCP3(object):
                             try:
                                 if not os.path.isdir(os.path.dirname(destin)):
                                     os.makedirs(os.path.dirname(destin))
-                            except AttributeError:
-                                # caused by fill_string errors with files.
-                                return False
+                            #except AttributeError:
+                            #    # caused by fill_string errors with files.
+                            #    return False
+                            except OSError:
+                                destin = self.remove_utf8(destin)
+                                if not os.path.isdir(os.path.dirname(destin)):
+                                    os.makedirs(os.path.dirname(destin))
                             try:
                                 # Try to copy as original filename
                                 shutil.copy(items, destin)

@@ -224,6 +224,12 @@
       <column type="gchararray"/>
     </columns>
   </object>
+  <object class="GtkListStore" id="medialiststore">
+    <columns>
+      <!-- column-name mediaarray -->
+      <column type="gchararray"/>
+    </columns>
+  </object>
   <object class="GtkWindow" id="main_window">
     <property name="can_focus">False</property>
     <property name="title" translatable="yes">PySyncP3: Sync music to USB devices</property>
@@ -662,6 +668,60 @@
                   </object>
                   <packing>
                     <property name="left_attach">0</property>
+                    <property name="top_attach">9</property>
+                    <property name="width">1</property>
+                    <property name="height">1</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkBox" id="box3">
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <child>
+                      <object class="GtkEntry" id="limitentry">
+                        <property name="visible">True</property>
+                        <property name="can_focus">True</property>
+                        <property name="invisible_char">●</property>
+                        <property name="text" translatable="yes">10</property>
+                        <property name="invisible_char_set">True</property>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="fill">True</property>
+                        <property name="padding">10</property>
+                        <property name="position">0</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkLabel" id="label3">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="hexpand">True</property>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="fill">True</property>
+                        <property name="position">1</property>
+                      </packing>
+                    </child>
+                  </object>
+                  <packing>
+                    <property name="left_attach">0</property>
+                    <property name="top_attach">8</property>
+                    <property name="width">1</property>
+                    <property name="height">1</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkLabel" id="limitlabel1">
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <property name="xalign">0</property>
+                    <property name="xpad">10</property>
+                    <property name="label" translatable="yes">Max Random Count:</property>
+                  </object>
+                  <packing>
+                    <property name="left_attach">0</property>
                     <property name="top_attach">7</property>
                     <property name="width">1</property>
                     <property name="height">1</property>
@@ -699,12 +759,6 @@
         </child>
       </object>
     </child>
-  </object>
-  <object class="GtkListStore" id="medialiststore">
-    <columns>
-      <!-- column-name mediaarray -->
-      <column type="gchararray"/>
-    </columns>
   </object>
   <object class="GtkMessageDialog" id="popup_window">
     <property name="can_focus">False</property>
