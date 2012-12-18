@@ -419,11 +419,12 @@ class PYSYNCP3(object):
                     self.popwindow.set_markup('ERROR: Low space on USB drive.')
                     self.popwindow.show()
                     return False
-                self.statusbar.set_text('Copied ' + os.path.basename(items))
                 destin = os.path.join(destinfolder + '/' +
                                        self.libraryformat)
                 destin = self.fill_string(items, destin)
                 self.statusbar.set_text('Copying... ' + os.path.basename(items))
+                while Gtk.events_pending():
+                    Gtk.main_iteration()
                 if not os.path.isdir(os.path.dirname(destin)):
                     os.makedirs(os.path.dirname(destin))
                 try:
@@ -542,13 +543,13 @@ class PYSYNCP3(object):
                                                             ' on USB drive.')
                                 self.popwindow.show()
                                 return False
-                            self.statusbar.set_text('Copied ' +
-                                                    os.path.basename(items))
                             destin = os.path.join(destinfolder + '/' +
                                                    self.libraryformat)
                             destin = self.fill_string(items, destin)
                             self.statusbar.set_text('Copying... ' +
                                                     os.path.basename(items))
+                            while Gtk.events_pending():
+                                Gtk.main_iteration()
                             try:
                                 if not os.path.isdir(os.path.dirname(destin)):
                                     os.makedirs(os.path.dirname(destin))
