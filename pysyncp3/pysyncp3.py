@@ -69,7 +69,8 @@ class PYSYNCP3(object):
             self.popwindow = self.builder.get_object("popup_window")
             closeerror = self.builder.get_object("closepop")
             closeerror.connect("clicked", self.closeerror)
-            self.popwindow.set_markup('PYSYNCP3 ERROR: Please install python-eyed3')
+            self.popwindow.set_markup('PYSYNCP3 ERROR: Please install' +
+                                        ' python-eyed3')
             self.popwindow.show()
             Gtk.main()
         else:
@@ -89,7 +90,8 @@ class PYSYNCP3(object):
             self.homebutton = self.builder.get_object("homebutton")
             self.suffixbox = self.builder.get_object('suffixentry')
             self.limitbox = self.builder.get_object('limitentry')
-            self.refreshmediabutton = self.builder.get_object("refreshmediabutton")
+            self.refreshmediabutton = self.builder.get_object('refreshmed' +
+                                                                'iabutton')
             self.syncfolderbutton = self.builder.get_object("syncfolderbutton")
             self.syncrandombutton = self.builder.get_object("syncrandombutton")
             self.statusbar = self.builder.get_object('statuslabel')
@@ -110,6 +112,7 @@ class PYSYNCP3(object):
             self.originalfolder = None
             self.current_dir = None
             self.randomcount = None
+            self.randomlist = None
             self.filelist = None
             self.synclist = None
             # read conf file
@@ -440,8 +443,6 @@ class PYSYNCP3(object):
         currentfolder.sort()
         for items in currentfolder:
             source = os.path.join(sourcefolder + '/' + items)
-            #destin = os.path.join(destinfolder + str.replace(sourcefolder,
-            #                        self.originalfolder, '') + '/' + items)
             if os.path.isdir(source):
                 self.sync_source(source)
             if source[(source.rfind('.')):] == '.mp3':
@@ -481,7 +482,6 @@ class PYSYNCP3(object):
             self.popwindow.show()
             return False
         if tmp == 'track':
-            #print 'tracksssssssss'
             self.randomlist = None
             self.random_track(self.originalfolder, destinfolder)
             return
@@ -494,14 +494,10 @@ class PYSYNCP3(object):
                         item.link(items)
                         item.setVersion(eyeD3.ID3_V2_4)
                         item.setTextEncoding(eyeD3.UTF_8_ENCODING)
-                    except Exception, err:
-                        print 'line 244'
-                        print type(err)
-                        print err
+                    except:
                         # Tag error
                         item = None
                     if tmp == 'artist':
-                        #print 'artist XXXX'
                         tmp_artist = item.getArtist('TPE1')
                         if tmp_artist == 'None':
                             tmp_artist = None
@@ -510,7 +506,6 @@ class PYSYNCP3(object):
                             if not tmp_artist in self.randomlist:
                                 self.randomlist.append(tmp_artist)
                     elif tmp == 'album':
-                        #print 'ALBUMSSSSSSS'
                         tmp_album = item.getAlbum()
                         if tmp_album == 'None':
                             tmp_album = None
@@ -525,7 +520,7 @@ class PYSYNCP3(object):
             if not self.randomlist:
                 return
             else:
-                STOP = False
+                stop = False
                 count = 0
                 length = len(self.randomlist)
                 try:
@@ -535,20 +530,25 @@ class PYSYNCP3(object):
                 if length < limit:
                     limit = length
                 # sync random files until out of items or full
-                while not os.statvfs(os.path.dirname(destinfolder)).f_bfree <= 10000 and not STOP and not count == limit:
+                while not (os.statvfs(os.path.dirname(destinfolder)).f_bfree
+                            <= 10000) and not stop and not count == limit:
                     tmp = random.choice(self.randomlist)
                     for items in self.synclist:
                         if tmp in items:
-                            if os.statvfs(os.path.dirname(destinfolder)).f_bfree <= 10000:
-                                STOP = True
-                                self.popwindow.set_markup('ERROR: Low space on USB drive.')
+                            if os.statvfs(os.path.dirname(destinfolder)
+                                            ).f_bfree <= 10000:
+                                stop = True
+                                self.popwindow.set_markup('ERROR: Low space' +
+                                                            ' on USB drive.')
                                 self.popwindow.show()
                                 return False
-                            self.statusbar.set_text('Copied ' + os.path.basename(items))
+                            self.statusbar.set_text('Copied ' +
+                                                    os.path.basename(items))
                             destin = os.path.join(destinfolder + '/' +
                                                    self.libraryformat)
                             destin = self.fill_string(items, destin)
-                            self.statusbar.set_text('Copying... ' + os.path.basename(items))
+                            self.statusbar.set_text('Copying... ' +
+                                                    os.path.basename(items))
                             try:
                                 if not os.path.isdir(os.path.dirname(destin)):
                                     os.makedirs(os.path.dirname(destin))
@@ -568,7 +568,6 @@ class PYSYNCP3(object):
                     count = count + 1    
                 self.enddialog.set_markup('Folder sync complete.')
                 self.enddialog.show()
-                return
 
     def random_track(self, *args):
         """ find and copy random music files to your chosen USB device """
@@ -591,7 +590,8 @@ class PYSYNCP3(object):
         tmp_count = 255
         if len(self.synclist) < tmp_count:
             tmp_count = len(self.synclist)
-        while trackcount < tmp_count and not os.statvfs(os.path.dirname(destinbase)
+        while trackcount < tmp_count and not os.statvfs(os.path.dirname(
+                                                    destinbase)
                                                     ).f_bfree == 10000:
             test = library + '/' + random.choice(os.listdir(library))
             while os.path.isdir(test):
