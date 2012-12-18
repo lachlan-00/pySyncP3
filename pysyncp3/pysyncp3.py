@@ -58,10 +58,10 @@ CONFIG = xdg_config_dirs[0] + '/usyncp3.conf'
 ICON_DIR = '/usr/share/icons/gnome/'
 
 
-class USYNCP3(object):
-    """ ??? """
+class PYSYNCP3(object):
+    """ browse folders in ui and sync them to USB """
     def __init__(self):
-        """ ??? """
+        """ Initialise the main window and start """
         self.builder = Gtk.Builder()
         self.builder.add_from_file("/usr/share/pysyncp3/pysyncp3.ui")
         self.builder.connect_signals(self)
@@ -152,6 +152,12 @@ class USYNCP3(object):
         self.foldertree.set_model(self.folderlist)
         # check for config file and info
         self.checkconfig()
+
+    def fill_random(self, *args):
+        """ set initial default active checkbox """
+        self.randomtrack.set_active(True)
+        self.randomalbum.set_active(False)
+        self.randomartist.set_active(False)
 
     def showconfig(self, *args):
         """ fill and show the config window """
@@ -265,11 +271,11 @@ class USYNCP3(object):
         tmp_comment = None
         try:
             item = eyeD3.Tag()
-            item.link(files)
-            item.setVersion(eyeD3.ID3_V2_4)
-            item.setTextEncoding(eyeD3.UTF_8_ENCODING)
-        except exceptions.NameError:
+            item.link(items)
+            print item.getTitle()
+        except NameError:
             # Tag error
+            print 'tagerror!'
             item = None
         # pull tag info for the current item
         if item:
@@ -350,7 +356,7 @@ class USYNCP3(object):
                 destin = destin.replace('%year%', tmp_year)
             if tmp_comment:
                 destin = destin.replace('%comment%', tmp_comment)
-            destin = destin + files[(files.rfind('.')):]
+            destin = destin + items[(items.rfind('.')):]
             return destin
         return
 
@@ -438,11 +444,11 @@ class USYNCP3(object):
             if os.path.isdir(source):
                 self.sync_source(source)
             if source[(source.rfind('.')):] == '.mp3':
-                self.synclist.append(source)
+                self.synclist.append(source.decode('utf-8'))
         return
 
     def get_random_type(self, *args):
-        """ ??? """
+        """ determine the type of random sync """
         randomitem = None
         if self.randomtrack.get_active():
             randomitem = 'track'
@@ -455,7 +461,7 @@ class USYNCP3(object):
         return randomitem
 
     def sync_random(self, *args):
-        """ ??? """
+        """ Main random function  """
         tmp = self.get_random_type()
         self.synclist = []
         self.randomlist = []
@@ -473,15 +479,15 @@ class USYNCP3(object):
             self.popwindow.set_markup('ERROR: Low space on USB drive.')
             self.popwindow.show()
             return False
+        if tmp == 'track':
+            #print 'tracksssssssss'
+            self.randomlist = None
+            self.random_track(self.originalfolder, destinfolder)
+            return
         self.sync_source(self.current_dir)
         if not len(self.synclist) == 0:
-            if tmp == 'track':
-                   #print 'tracksssssssss'
-                   self.randomlist = None
             if not self.randomlist == None:
                 for items in self.synclist:
-                    print 'GGG'
-                    print items
                     try:
                         item = eyeD3.Tag()
                         item.link(items)
@@ -500,7 +506,8 @@ class USYNCP3(object):
                             tmp_artist = None
                         if tmp_artist:
                             tmp_artist = tmp_artist.replace('/', '_')
-                            self.randomlist.append(tmp_artist)
+                            if not tmp_artist in self.randomlist:
+                                self.randomlist.append(tmp_artist)
                     elif tmp == 'album':
                         #print 'ALBUMSSSSSSS'
                         tmp_album = item.getAlbum()
@@ -508,40 +515,51 @@ class USYNCP3(object):
                             tmp_album = None
                         if tmp_album:
                             tmp_album = tmp_album.replace('/', '_')
-                            self.randomlist.append(tmp_album)
+                            if not tmp_album in self.randomlist:
+                                self.randomlist.append(tmp_album)
             if os.statvfs(os.path.dirname(destinfolder)).f_bfree <= 10000:
                 self.popwindow.set_markup('ERROR: Low space on USB drive.')
                 self.popwindow.show()
                 return False
             if not self.randomlist:
-                self.random_track(self.originalfolder, destinfolder)
-                #self.statusbar.set_text('Copied ' + os.path.basename(items))
-                #destin = os.path.join(destinfolder + '/' +
-                #                       self.libraryformat)
-                #destin = self.fill_string(items, destin)
-                #self.statusbar.set_text('Copying... ' + os.path.basename(items))
-                #if not os.path.isdir(os.path.dirname(destin)):
-                #    os.makedirs(os.path.dirname(destin))
-                #try:
-                #    # Try to copy as original filename
-                #    shutil.copy(items, destin)
-                #except IOError:
-                #    # FAT32 Compatability
-                #    shutil.copy(items, self.remove_utf8(destin))
-            self.enddialog.set_markup('Folder sync complete.')
-            self.enddialog.show()
-
-    def random_folder(self, *args):
-        """ ??? """
-        print 'random folder'
-        library = args[0]
-        depth = args[1]
-        destinbase = args[2]
-        test = library + '/' + random.choice(os.listdir(library))
-        self.statusbar.set_text('Random sync completed.')
+                return
+            else:
+                STOP = False
+                count = 0
+                # sync random files until out of items or full
+                while not os.statvfs(os.path.dirname(destinfolder)).f_bfree <= 10000 and not STOP and not count == 10:
+                    tmp = random.choice(self.randomlist)
+                    for items in self.synclist:
+                        if tmp in items:
+                            if os.statvfs(os.path.dirname(destinfolder)).f_bfree <= 10000:
+                                STOP = True
+                                self.popwindow.set_markup('ERROR: Low space on USB drive.')
+                                self.popwindow.show()
+                                return False
+                            self.statusbar.set_text('Copied ' + os.path.basename(items))
+                            destin = os.path.join(destinfolder + '/' +
+                                                   self.libraryformat)
+                            destin = self.fill_string(items, destin)
+                            self.statusbar.set_text('Copying... ' + os.path.basename(items))
+                            try:
+                                if not os.path.isdir(os.path.dirname(destin)):
+                                    os.makedirs(os.path.dirname(destin))
+                            except AttributeError:
+                                # caused by fill_string errors with files.
+                                return False
+                            try:
+                                # Try to copy as original filename
+                                shutil.copy(items, destin)
+                            except IOError:
+                                # FAT32 Compatability
+                                shutil.copy(items, self.remove_utf8(destin))
+                    count = count + 1    
+                self.enddialog.set_markup('Folder sync complete.')
+                self.enddialog.show()
+                return
 
     def random_track(self, *args):
-        """ ??? """
+        """ find and copy random music files to your chosen USB device """
         print 'random track'
         library = args[0]
         destinbase = args[1] + '/RANDOM0'
@@ -579,27 +597,8 @@ class USYNCP3(object):
                     print 'Creating ' + destin + ' failed.'
         self.statusbar.set_text('Random sync completed.')
 
-    def random_sync(self, *args):
-        """ Find and copy random files """
-        library = args[0]
-        if type(args[0]) == Gtk.Button:
-            library = self.homefolder
-        self.statusbar.set_text('Random sync in progress...')
-        self.randomcount = 0
-        self.randomcount = self.get_random_type()
-        currentitem =  self.mediacombo.get_active_iter()
-        randomdestin = (self.medialist.get_value(currentitem, 0) + '/' +
-                        self.suffixbox.get_text())
-        #while DISKFREE and not os.statvfs(
-        #os.path.dirname(destinfolder)).f_bfree == 20000:
-        if len(LIBRARYSTYLE) == self.randomcount:
-            self.random_track(library, randomdestin)
-        else:
-            print 'Random Folder Sync'
-            self.random_folder(library, self.randomcount, randomdestin)
-    
     def scan_for_media(self, *args):
-        """ ??? """
+        """ fill the UI with available USB media devices """
         media_dir = '/media'
         # clear list if we have scanned before
         for items in self.medialist:
@@ -621,11 +620,5 @@ class USYNCP3(object):
         self.mediacombo.set_active(0)
         return
 
-    def fill_random(self, *args):
-        """ ??? """
-        self.randomtrack.set_active(True)
-        self.randomalbum.set_active(False)
-        self.randomartist.set_active(False)
-        
 if __name__ == "__main__":
-    USYNCP3()
+    PYSYNCP3()
