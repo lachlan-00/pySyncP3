@@ -414,6 +414,7 @@ class PYSYNCP3(object):
             return False
         self.sync_source(self.current_dir)
         if not len(self.synclist) == 0:
+            trackcount = 0
             for items in self.synclist:
                 if os.statvfs(os.path.dirname(destinfolder)).f_bfree <= 10000:
                     self.popwindow.set_markup('ERROR: Low space on USB drive.')
@@ -422,7 +423,10 @@ class PYSYNCP3(object):
                 destin = os.path.join(destinfolder + '/' +
                                        self.libraryformat)
                 destin = self.fill_string(items, destin)
-                self.statusbar.set_text('Copying... ' + os.path.basename(items))
+                percent = float(trackcount) / float(len(self.synclist)) * 100.0
+                self.statusbar.set_text(' ' + str(int(percent)) +
+                                               '% Completed.    Copying... ' +
+                                               os.path.basename(items))
                 while Gtk.events_pending():
                     Gtk.main_iteration()
                 if not os.path.isdir(os.path.dirname(destin)):
@@ -433,6 +437,7 @@ class PYSYNCP3(object):
                 except IOError:
                     # FAT32 Compatability
                     shutil.copy(items, self.remove_utf8(destin))
+                trackcount = trackcount + 1
             self.enddialog.set_markup('Folder sync complete.')
             self.enddialog.show()
 
@@ -534,6 +539,7 @@ class PYSYNCP3(object):
                 while not (os.statvfs(os.path.dirname(destinfolder)).f_bfree
                             <= 10000) and not stop and not count == limit:
                     tmp = random.choice(self.randomlist)
+                    trackcount = 0
                     for items in self.synclist:
                         if tmp in items:
                             if os.statvfs(os.path.dirname(destinfolder)
@@ -546,8 +552,11 @@ class PYSYNCP3(object):
                             destin = os.path.join(destinfolder + '/' +
                                                    self.libraryformat)
                             destin = self.fill_string(items, destin)
-                            self.statusbar.set_text('Copying... ' +
-                                                    os.path.basename(items))
+                            percent = (float(trackcount) /
+                                       float(len(self.synclist)) * 100.0)
+                            self.statusbar.set_text(' ' + str(int(percent)) +
+                                               '% Completed.    Copying... ' +
+                                               os.path.basename(items))
                             while Gtk.events_pending():
                                 Gtk.main_iteration()
                             try:
@@ -566,6 +575,7 @@ class PYSYNCP3(object):
                             except IOError:
                                 # FAT32 Compatability
                                 shutil.copy(items, self.remove_utf8(destin))
+                        trackcount = trackcount + 1
                     count = count + 1    
                 self.enddialog.set_markup('Folder sync complete.')
                 self.enddialog.show()
@@ -604,9 +614,11 @@ class PYSYNCP3(object):
             if mimetypes.guess_type(test)[0] == 'audio/mpeg':
                 destin = os.path.join(destinbase + '/' + os.path.basename(test))
                 trackcount = trackcount + 1
+                percent = float(trackcount) / float(tmp_count) * 100.00
                 try:
                     print 'Copying: ' + test
-                    self.statusbar.set_text('Copying... ' +
+                    self.statusbar.set_text(' ' + str(int(percent)) +
+                                               '% Completed.    Copying... ' +
                                                os.path.basename(test))
                     shutil.copy(test, self.remove_utf8(destin))
                 except OSError:
