@@ -577,6 +577,8 @@ class PYSYNCP3(object):
         destinbase = args[1] + '/RANDOM0'
         randompath = False
         filler = 0
+        trackcount = 0
+        tmp_count = 255
         while not randompath:
             if not os.path.isdir(destinbase[:-1] + str(filler)):
                 randomstr = (str(filler) + '/')
@@ -587,13 +589,12 @@ class PYSYNCP3(object):
                 randompath = True
             else:
                 filler = filler + 1
-        trackcount = 0
-        tmp_count = 255
-        if len(self.synclist) < tmp_count:
-            tmp_count = len(self.synclist)
+        if not len(self.synclist) == 0:
+            if len(self.synclist) < tmp_count:
+                tmp_count = len(self.synclist)
         while trackcount < tmp_count and not os.statvfs(os.path.dirname(
                                                     destinbase)
-                                                    ).f_bfree == 10000:
+                                                    ).f_bfree < 10000:
             test = library + '/' + random.choice(os.listdir(library))
             while os.path.isdir(test):
                 try:
@@ -605,9 +606,13 @@ class PYSYNCP3(object):
                 trackcount = trackcount + 1
                 try:
                     print 'Copying: ' + test
+                    self.statusbar.set_text('Copying... ' +
+                                               os.path.basename(test))
                     shutil.copy(test, self.remove_utf8(destin))
                 except OSError:
                     print 'Creating ' + destin + ' failed.'
+            while Gtk.events_pending():
+                Gtk.main_iteration()
         self.statusbar.set_text('Random sync completed.')
 
     def scan_for_media(self, *args):
