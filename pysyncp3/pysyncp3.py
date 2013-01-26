@@ -553,7 +553,7 @@ class PYSYNCP3(object):
                                                    self.libraryformat)
                             destin = self.fill_string(items, destin)
                             percent = (float(trackcount) /
-                                       float(len(self.synclist)) * 100.0)
+                                       float(limit)) * 100.0)
                             self.statusbar.set_text(' ' + str(int(percent)) +
                                                '% Completed.    Copying... ' +
                                                os.path.basename(items))
