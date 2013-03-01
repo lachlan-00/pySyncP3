@@ -430,7 +430,10 @@ class PYSYNCP3(object):
                 while Gtk.events_pending():
                     Gtk.main_iteration()
                 if not os.path.isdir(os.path.dirname(destin)):
-                    os.makedirs(os.path.dirname(destin))
+                    try:
+                        os.makedirs(self.remove_utf8(os.path.dirname(destin)))
+                    except OSError:
+                        pass
                 try:
                     # Try to copy as original filename
                     shutil.copy(items, destin)
@@ -553,7 +556,7 @@ class PYSYNCP3(object):
                                                    self.libraryformat)
                             destin = self.fill_string(items, destin)
                             percent = (float(trackcount) /
-                                       float(limit)) * 100.0)
+                                       float(limit) * 100.0)
                             self.statusbar.set_text(' ' + str(int(percent)) +
                                                '% Completed.    Copying... ' +
                                                os.path.basename(items))
