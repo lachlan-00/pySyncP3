@@ -36,19 +36,20 @@ try:
     import eyeD3
     TAG_SUPPORT = True
 except ImportError:
+    eyeD3 = None
     TAG_SUPPORT = False
 
 URL_ASCII = ('%', "#", ';', '"', '<', '>', '?', '[', '\\', "]", '^', '`', '{',
-            '|', '}', '€', '‚', 'ƒ', '„', '…', '†', '‡', 'ˆ', '‰', 'Š', '‹',
-            'Œ', 'Ž', '‘', '’', '“', '”', '•', '–', '—', '˜', '™', 'š', '›',
-            'œ', 'ž', 'Ÿ', '¡', '¢', '£', '¥', '|', '§', '¨', '©', 'ª', '«',
-            '¬', '¯', '®', '¯', '°', '±', '²', '³', '´', 'µ', '¶', '·', '¸',
-            '¹', 'º', '»', '¼', '½', '¾', '¿', 'À', 'Á', 'Â', 'Ã', 'Ä', 'Å',
-            'Æ', 'Ç', 'È', 'É', 'Ê', 'Ë', 'Ì', 'Í', 'Î', 'Ï', 'Ð', 'Ñ', 'Ò',
-            'Ó', 'Ô', 'Õ', 'Ö', 'Ø', 'Ù', 'Ú', 'Û', 'Ü', 'Ý', 'Þ', 'ß', 'à',
-            'á', 'â', 'ã', 'ä', 'å', 'æ', 'ç', 'è', 'é', 'ê', 'ë', 'ì', 'í',
-            'î', 'ï', 'ð', 'ñ', 'ò', 'ó', 'ô', 'õ', 'ö', '÷', 'ø', 'ù', 'ú',
-            'û', 'ü', 'ý', 'þ', 'ÿ', '¦', ':', '*')
+             '|', '}', '€', '‚', 'ƒ', '„', '…', '†', '‡', 'ˆ', '‰', 'Š', '‹',
+             'Œ', 'Ž', '‘', '’', '“', '”', '•', '–', '—', '˜', '™', 'š', '›',
+             'œ', 'ž', 'Ÿ', '¡', '¢', '£', '¥', '|', '§', '¨', '©', 'ª', '«',
+             '¬', '¯', '®', '¯', '°', '±', '²', '³', '´', 'µ', '¶', '·', '¸',
+             '¹', 'º', '»', '¼', '½', '¾', '¿', 'À', 'Á', 'Â', 'Ã', 'Ä', 'Å',
+             'Æ', 'Ç', 'È', 'É', 'Ê', 'Ë', 'Ì', 'Í', 'Î', 'Ï', 'Ð', 'Ñ', 'Ò',
+             'Ó', 'Ô', 'Õ', 'Ö', 'Ø', 'Ù', 'Ú', 'Û', 'Ü', 'Ý', 'Þ', 'ß', 'à',
+             'á', 'â', 'ã', 'ä', 'å', 'æ', 'ç', 'è', 'é', 'ê', 'ë', 'ì', 'í',
+             'î', 'ï', 'ð', 'ñ', 'ò', 'ó', 'ô', 'õ', 'ö', '÷', 'ø', 'ù', 'ú',
+             'û', 'ü', 'ý', 'þ', 'ÿ', '¦', ':', '*')
 
 LIBRARYSTYLE = ['Artist', 'Album', 'Track']
 HOMEFOLDER = os.getenv('HOME')
@@ -70,7 +71,7 @@ class PYSYNCP3(object):
             closeerror = self.builder.get_object("closepop")
             closeerror.connect("clicked", self.closeerror)
             self.popwindow.set_markup('PYSYNCP3 ERROR: Please install' +
-                                        ' python-eyed3')
+                                      ' python-eyed3')
             self.popwindow.show()
             Gtk.main()
         else:
@@ -91,7 +92,7 @@ class PYSYNCP3(object):
             self.suffixbox = self.builder.get_object('suffixentry')
             self.limitbox = self.builder.get_object('limitentry')
             self.refreshmediabutton = self.builder.get_object('refreshmed' +
-                                                                'iabutton')
+                                                              'iabutton')
             self.syncfolderbutton = self.builder.get_object("syncfolderbutton")
             self.syncrandombutton = self.builder.get_object("syncrandombutton")
             self.statusbar = self.builder.get_object('statuslabel')
@@ -205,6 +206,7 @@ class PYSYNCP3(object):
     def folderclick(self, *args):
         """ traverse folders on double click """
         model, treeiter = self.foldertree.get_selection().get_selected()
+        new_dir = None
         if treeiter:
             new_dir = self.current_dir + '/' + model[treeiter][0]
         if os.path.isdir(new_dir):
@@ -243,9 +245,9 @@ class PYSYNCP3(object):
         if not os.path.isfile(CONFIG):
             conffile = open(CONFIG, "w")
             conffile.write("[conf]\nhome = " + os.getenv('HOME') +
-                       "\ndefaultlibrary = " + os.getenv('HOME') +
-                       "\noutputstyle = %artist% - %album% " +
-                       " - %track% - %title%\n")
+                           "\ndefaultlibrary = " + os.getenv('HOME') +
+                           "\noutputstyle = %artist% - %album% " +
+                           " - %track% - %title%\n")
             conffile.close()
         return
 
@@ -259,7 +261,7 @@ class PYSYNCP3(object):
                 string = string.replace(URL_ASCII[count], '_')
             except UnicodeDecodeError:
                 pass
-            count = count + 1
+            count += 1
         return string
 
     def fill_string(self, items, destin):
@@ -399,13 +401,13 @@ class PYSYNCP3(object):
         """ sync files to media device """
         self.synclist = []
         self.originalfolder = self.current_dir
-        currentitem =  self.mediacombo.get_active_iter()
+        currentitem = self.mediacombo.get_active_iter()
         try:
             destinfolder = (self.medialist.get_value(currentitem, 0) + '/' +
-                                self.suffixbox.get_text())
+                            self.suffixbox.get_text())
         except TypeError:
             self.popwindow.set_markup('ERROR: Please insert a USB device and' +
-                                       ' refresh device list.')
+                                      ' refresh device list.')
             self.popwindow.show()
             return False
         if os.statvfs(os.path.dirname(destinfolder)).f_bfree <= 10000:
@@ -421,12 +423,12 @@ class PYSYNCP3(object):
                     self.popwindow.show()
                     return False
                 destin = os.path.join(destinfolder + '/' +
-                                       self.libraryformat)
+                                      self.libraryformat)
                 destin = self.fill_string(items, destin)
                 percent = float(trackcount) / float(len(self.synclist)) * 100.0
                 self.statusbar.set_text(' ' + str(int(percent)) +
-                                               '% Completed.    Copying... ' +
-                                               os.path.basename(items))
+                                        '% Completed.    Copying... ' +
+                                        os.path.basename(items))
                 while Gtk.events_pending():
                     Gtk.main_iteration()
                 if not os.path.isdir(os.path.dirname(destin)):
@@ -440,12 +442,13 @@ class PYSYNCP3(object):
                 except IOError:
                     # FAT32 Compatability
                     shutil.copy(items, self.remove_utf8(destin))
-                trackcount = trackcount + 1
+                trackcount += 1
             self.enddialog.set_markup('Folder sync complete.')
             self.enddialog.show()
 
     def sync_source(self, *args):
         """ Get file list for syncing """
+        sourcefolder = None
         if not args[0] == '' and not type(args[0]) == Gtk.Button:
             sourcefolder = args[0]
         currentfolder = os.listdir(sourcefolder)
@@ -477,13 +480,13 @@ class PYSYNCP3(object):
         self.synclist = []
         self.randomlist = []
         self.originalfolder = self.current_dir
-        currentitem =  self.mediacombo.get_active_iter()
+        currentitem = self.mediacombo.get_active_iter()
         try:
             destinfolder = (self.medialist.get_value(currentitem, 0) + '/' +
-                                self.suffixbox.get_text())
+                            self.suffixbox.get_text())
         except TypeError:
             self.popwindow.set_markup('ERROR: Please insert a USB device and' +
-                                       ' refresh device list.')
+                                      ' refresh device list.')
             self.popwindow.show()
             return False
         if os.statvfs(os.path.dirname(destinfolder)).f_bfree <= 10000:
@@ -496,7 +499,7 @@ class PYSYNCP3(object):
             return
         self.sync_source(self.current_dir)
         if not len(self.synclist) == 0:
-            if not self.randomlist == None:
+            if self.randomlist is not None:
                 for items in self.synclist:
                     try:
                         item = eyeD3.Tag()
@@ -506,22 +509,23 @@ class PYSYNCP3(object):
                     except:
                         # Tag error
                         item = None
-                    if tmp == 'artist':
-                        tmp_artist = item.getArtist('TPE1')
-                        if tmp_artist == 'None':
-                            tmp_artist = None
-                        if tmp_artist:
-                            tmp_artist = tmp_artist.replace('/', '_')
-                            if not tmp_artist in self.randomlist:
-                                self.randomlist.append(tmp_artist)
-                    elif tmp == 'album':
-                        tmp_album = item.getAlbum()
-                        if tmp_album == 'None':
-                            tmp_album = None
-                        if tmp_album:
-                            tmp_album = tmp_album.replace('/', '_')
-                            if not tmp_album in self.randomlist:
-                                self.randomlist.append(tmp_album)
+                    if item:
+                        if tmp == 'artist':
+                            tmp_artist = item.getArtist('TPE1')
+                            if tmp_artist == 'None':
+                                tmp_artist = None
+                            if tmp_artist:
+                                tmp_artist = tmp_artist.replace('/', '_')
+                                if tmp_artist not in self.randomlist:
+                                    self.randomlist.append(tmp_artist)
+                        elif tmp == 'album':
+                            tmp_album = item.getAlbum()
+                            if tmp_album == 'None':
+                                tmp_album = None
+                            if tmp_album:
+                                tmp_album = tmp_album.replace('/', '_')
+                                if tmp_album not in self.randomlist:
+                                    self.randomlist.append(tmp_album)
             if os.statvfs(os.path.dirname(destinfolder)).f_bfree <= 10000:
                 self.popwindow.set_markup('ERROR: Low space on USB drive.')
                 self.popwindow.show()
@@ -539,33 +543,32 @@ class PYSYNCP3(object):
                 if length < limit:
                     limit = length
                 # sync random files until out of items or full
-                while not (os.statvfs(os.path.dirname(destinfolder)).f_bfree
-                            <= 10000) and not stop and not count == limit:
+                while not (os.statvfs(os.path.dirname(destinfolder)).f_bfree <=
+                           10000) and not stop and not count == limit:
                     tmp = random.choice(self.randomlist)
                     trackcount = 0
                     for items in self.synclist:
                         if tmp in items:
-                            if os.statvfs(os.path.dirname(destinfolder)
-                                            ).f_bfree <= 10000:
+                            if os.statvfs(os.path.dirname(destinfolder)).f_bfree <= 10000:
                                 stop = True
                                 self.popwindow.set_markup('ERROR: Low space' +
-                                                            ' on USB drive.')
+                                                          ' on USB drive.')
                                 self.popwindow.show()
                                 return False
                             destin = os.path.join(destinfolder + '/' +
-                                                   self.libraryformat)
+                                                  self.libraryformat)
                             destin = self.fill_string(items, destin)
                             percent = (float(trackcount) /
                                        float(limit) * 100.0)
                             self.statusbar.set_text(' ' + str(int(percent)) +
-                                               '% Completed.    Copying... ' +
-                                               os.path.basename(items))
+                                                    '% Completed.    Copying... ' +
+                                                    os.path.basename(items))
                             while Gtk.events_pending():
                                 Gtk.main_iteration()
                             try:
                                 if not os.path.isdir(os.path.dirname(destin)):
                                     os.makedirs(os.path.dirname(destin))
-                            #except AttributeError:
+                            # except AttributeError:
                             #    # caused by fill_string errors with files.
                             #    return False
                             except OSError:
@@ -578,8 +581,8 @@ class PYSYNCP3(object):
                             except IOError:
                                 # FAT32 Compatability
                                 shutil.copy(items, self.remove_utf8(destin))
-                        trackcount = trackcount + 1
-                    count = count + 1    
+                        trackcount += 1
+                    count += 1
                 self.enddialog.set_markup('Folder sync complete.')
                 self.enddialog.show()
 
@@ -601,7 +604,7 @@ class PYSYNCP3(object):
                 destinbase = os.path.dirname(destinbase[:-1] + randomstr)
                 randompath = True
             else:
-                filler = filler + 1
+                filler += 1
         if not len(self.synclist) == 0:
             if len(self.synclist) < tmp_count:
                 tmp_count = len(self.synclist)
@@ -616,13 +619,13 @@ class PYSYNCP3(object):
                     test = library + '/' + random.choice(os.listdir(library))
             if mimetypes.guess_type(test)[0] == 'audio/mpeg':
                 destin = os.path.join(destinbase + '/' + os.path.basename(test))
-                trackcount = trackcount + 1
+                trackcount += 1
                 percent = float(trackcount) / float(tmp_count) * 100.00
                 try:
                     print 'Copying: ' + test
                     self.statusbar.set_text(' ' + str(int(percent)) +
-                                               '% Completed.    Copying... ' +
-                                               os.path.basename(test))
+                                            '% Completed.    Copying... ' +
+                                            os.path.basename(test))
                     shutil.copy(test, self.remove_utf8(destin))
                 except OSError:
                     print 'Creating ' + destin + ' failed.'
